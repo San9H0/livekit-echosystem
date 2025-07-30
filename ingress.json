@@ -1,0 +1,7 @@
+{
+    "input_type": 0,
+    "name": "obs-stream",
+    "room_name": "example-room",
+    "participant_identity": "obs-streamer",
+    "participant_name": "OBS Stream"
+}

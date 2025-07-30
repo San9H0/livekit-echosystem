@@ -1,0 +1,72 @@
+version: '3.8'
+
+# Load environment variables from .env file
+# Create a .env file with your LiveKit API credentials:
+# LIVEKIT_API_KEY=your_api_key_here
+# LIVEKIT_API_SECRET=your_api_secret_here
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+    depends_on:
+      - redis
+    networks:
+      - livekit-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - livekit-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+  livekit:
+    build:
+      context: ./livekit
+      dockerfile: Dockerfile
+    ports:
+      - "7880:7880"  # Main TCP port for RoomService and RTC endpoint
+      - "7881:7881"  # WebRTC TCP port
+      - "7884:7884" 
+      - "7885:7885" 
+      # Windows에서는 UDP 포트 범위 매핑이 제한적이므로 필요한 포트들만 개별적으로 매핑
+      - "50000:50000/udp"
+      - "50001:50001/udp"
+      - "50002:50002/udp"
+      - "50003:50003/udp"
+      - "50004:50004/udp"
+      - "50005:50005/udp"
+      - "50006:50006/udp"
+      - "50007:50007/udp"
+      - "50008:50008/udp"
+      - "50009:50009/udp"
+      - "50010:50010/udp"
+    environment:
+      - LIVEKIT_KEYS=${LIVEKIT_KEYS}
+    volumes:
+      - ./livekit.config.docker.yaml:/config.yaml
+    command: ["--config", "/config.yaml"]
+    #entrypoint: ["sh", "-c", "sleep infinity"]
+    depends_on:
+      - redis
+    networks:
+      - livekit-network
+
+volumes:
+  redis-data:
+
+networks:
+  livekit-network:
+    driver: bridge

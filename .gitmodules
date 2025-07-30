@@ -1,0 +1,3 @@
+[submodule "livekit"]
+	path = livekit
+	url = https://github.com/livekit/livekit-server.git
