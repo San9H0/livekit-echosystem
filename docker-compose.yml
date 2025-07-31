@@ -64,6 +64,17 @@ services:
     networks:
       - livekit-network
 
+  ffmpeg:
+    image: jrottenberg/ffmpeg:6.1.2-ubuntu2404
+    container_name: ffmpeg-service
+    #command: ["sleep", "infinity"]
+    entrypoint: ["sh", "-c", "sleep infinity"]
+    volumes:
+      - ./ffmpeg:/workspace
+    networks:
+      - livekit-network
+    restart: unless-stopped
+
 volumes:
   redis-data:
 
