@@ -1,0 +1,13 @@
+### ===========================================
+### TOKEN API 테스트
+### ===========================================
+
+### Get Token - 기본 토큰 생성
+GET http://localhost:8080/getToken
+
+### ===========================================
+### 응답 예시
+### ===========================================
+
+### Get Token 응답 예시:
+# eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTA4ODAxNDMsImlzcyI6IkFQSVNTZmNDQnZ0b3FHRSIsIm5iZiI6MTY5MDg3NjU0Mywic3ViIjoiaWRlbnRpdHkiLCJ2aWRlbyI6eyJyb29tIjoibXktcm9vbSIsInJvb21Kb2luIjp0cnVlfX0.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

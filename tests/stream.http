@@ -1,0 +1,270 @@
+### ===========================================
+### STREAM API 테스트
+### ===========================================
+
+### Create Stream - 스트림 생성 (호스트용)
+POST http://localhost:8080/api/create_stream
+Content-Type: application/json
+
+{
+  "metadata": {
+    "creator_identity": "host123",
+    "title": "My Live Stream",
+    "description": "This is a test live stream",
+    "category": "gaming"
+  },
+  "room_name": "test-room-001"
+}
+
+###
+
+### Create Stream - 자동 룸 이름 생성
+POST http://localhost:8080/api/create_stream
+Content-Type: application/json
+
+{
+  "metadata": {
+    "creator_identity": "streamer456",
+    "title": "Auto Generated Room Stream",
+    "description": "Stream with auto-generated room name"
+  }
+}
+
+###
+
+### Join Stream - 시청자 참여
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "identity": "viewer123",
+  "room_name": "test-room-001"
+}
+
+###
+
+### Join Stream - 다른 시청자
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "identity": "viewer456",
+  "room_name": "test-room-001"
+}
+
+###
+
+### List All Streams - 모든 스트림 조회
+GET http://localhost:8080/api/streams
+
+###
+
+### Get Stream - 특정 스트림 상세 조회
+GET http://localhost:8080/api/streams/test-room-001
+
+###
+
+### Delete Stream - 스트림 삭제
+DELETE http://localhost:8080/api/streams/myrooms
+
+### ===========================================
+### Stream 전체 워크플로우 테스트
+### ===========================================
+
+### 1단계: 스트림 생성 (호스트)
+POST http://localhost:8080/api/create_stream
+Content-Type: application/json
+
+{
+  "metadata": {
+    "creator_identity": "workflow_host",
+    "title": "Workflow Test Stream",
+    "description": "Testing complete stream workflow"
+  },
+  "room_name": "workflow-test-room"
+}
+
+###
+
+### 2단계: 시청자 1 참여
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "identity": "workflow_viewer1",
+  "room_name": "workflow-test-room"
+}
+
+###
+
+### 3단계: 시청자 2 참여
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "identity": "workflow_viewer2", 
+  "room_name": "workflow-test-room"
+}
+
+###
+
+### 4단계: 모든 스트림 목록 확인
+GET http://localhost:8080/api/streams
+
+###
+
+### 5단계: 특정 스트림 상세 조회 (참가자 포함)
+GET http://localhost:8080/api/streams/workflow-test-room
+
+###
+
+### 6단계: 스트림 삭제 (정리)
+DELETE http://localhost:8080/api/streams/workflow-test-room
+
+###
+
+### 7단계: 삭제 후 조회 시 404 에러 확인
+GET http://localhost:8080/api/streams/workflow-test-room
+
+### ===========================================
+### 에러 케이스 테스트
+### ===========================================
+
+### Create Stream - 에러 케이스 (creator_identity 없음)
+POST http://localhost:8080/api/create_stream
+Content-Type: application/json
+
+{
+  "metadata": {
+    "title": "Stream without creator"
+  }
+}
+
+###
+
+### Join Stream - 에러 케이스 (동일한 identity로 재참여)
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "identity": "viewer123",
+  "room_name": "test-room-001"
+}
+
+###
+
+### Join Stream - 에러 케이스 (identity 없음)
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "room_name": "test-room-001"
+}
+
+###
+
+### Join Stream - 에러 케이스 (room_name 없음)
+POST http://localhost:8080/api/join_stream
+Content-Type: application/json
+
+{
+  "identity": "viewer789"
+}
+
+###
+
+### Get Stream - 에러 케이스 (존재하지 않는 룸)
+GET http://localhost:8080/api/streams/non-existent-room
+
+###
+
+### Delete Stream - 에러 케이스 (존재하지 않는 룸)
+DELETE http://localhost:8080/api/streams/non-existent-room
+
+### ===========================================
+### 응답 예시
+### ===========================================
+
+### Create Stream 응답 예시:
+# {
+#   "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "connection_details": {
+#     "ws_url": "ws://livekit:7880",
+#     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+#   }
+# }
+
+### Join Stream 응답 예시:
+# {
+#   "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "connection_details": {
+#     "ws_url": "ws://livekit:7880", 
+#     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+#   }
+# }
+
+### List Streams 응답 예시:
+# {
+#   "rooms": [
+#     {
+#       "name": "test-room-001",
+#       "metadata": {
+#         "creator_identity": "host123",
+#         "title": "My Live Stream",
+#         "description": "This is a test live stream",
+#         "category": "gaming"
+#       },
+#       "num_participants": 3,
+#       "creation_time": 1690876543,
+#       "empty_timeout": 300,
+#       "max_participants": 100
+#     }
+#   ],
+#   "total": 1
+# }
+
+### Get Stream 응답 예시:
+# {
+#   "room": {
+#     "name": "test-room-001",
+#     "metadata": {
+#       "creator_identity": "host123",
+#       "title": "My Live Stream",
+#       "description": "This is a test live stream",
+#       "category": "gaming"
+#     },
+#     "num_participants": 3,
+#     "creation_time": 1690876543,
+#     "empty_timeout": 300,
+#     "max_participants": 100
+#   },
+#   "participants": [
+#     {
+#       "identity": "host123",
+#       "name": "host123",
+#       "state": "ACTIVE",
+#       "joined_at": 1690876543,
+#       "is_publisher": true
+#     },
+#     {
+#       "identity": "viewer123",
+#       "name": "viewer123", 
+#       "state": "ACTIVE",
+#       "joined_at": 1690876600,
+#       "is_publisher": false
+#     },
+#     {
+#       "identity": "viewer456",
+#       "name": "viewer456",
+#       "state": "ACTIVE", 
+#       "joined_at": 1690876650,
+#       "is_publisher": false
+#     }
+#   ]
+# }
+
+### Delete Stream 응답 예시:
+# {
+#   "message": "Stream deleted successfully",
+#   "room_name": "test-room-001"
+# }

@@ -31,6 +31,10 @@ func main() {
 	apiKey := os.Getenv("LIVEKIT_API_KEY")
 	apiSecret := os.Getenv("LIVEKIT_API_SECRET")
 
+	fmt.Println("hostURL", hostURL)
+	fmt.Println("apiKey", apiKey)
+	fmt.Println("apiSecret", apiSecret)
+
 	// 환경 변수 검증
 	if hostURL == "" || apiKey == "" || apiSecret == "" {
 		log.Fatal("LiveKit environment variables not configured")
@@ -39,9 +43,10 @@ func main() {
 	// 핸들러 생성
 	ingressHandler := handlers.NewIngressHandler(hostURL, apiKey, apiSecret)
 	tokenHandler := handlers.NewTokenHandler(apiKey, apiSecret)
+	streamHandler := handlers.NewStreamHandler(hostURL, apiKey, apiSecret)
 
 	// 라우트 설정
-	routes.SetupRoutes(e, ingressHandler, tokenHandler)
+	routes.SetupRoutes(e, ingressHandler, tokenHandler, streamHandler)
 
 	// 서버 시작
 	log.Println("Server starting on :8080")

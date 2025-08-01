@@ -1,0 +1,115 @@
+### ===========================================
+### INGRESS API 테스트
+### ===========================================
+
+### Create Ingress - RTMP 타입
+POST http://localhost:8080/api/create_ingress
+Content-Type: application/json
+
+{
+  "room_name": "ingress-test-room",
+  "ingress_type": "rtmp",
+  "metadata": {
+    "creator_identity": "obs_streamer",
+    "title": "OBS Stream Test"
+  }
+}
+
+###
+
+### Create Ingress - WHIP 타입
+POST http://localhost:8080/api/create_ingress
+Content-Type: application/json
+
+{
+  "room_name": "whip-test-room",
+  "ingress_type": "whip",
+  "metadata": {
+    "creator_identity": "browser_streamer",
+    "title": "Browser Stream Test"
+  }
+}
+
+###
+
+### List All Ingress - 모든 Ingress 조회
+GET http://localhost:8080/api/ingress
+
+###
+
+### Get Specific Ingress - 특정 Ingress 조회
+GET http://localhost:8080/api/ingress/IN_XXXXXXXXXX
+
+###
+
+### Delete Ingress - Ingress 삭제
+DELETE http://localhost:8080/api/ingress/IN_XXXXXXXXXX
+
+### ===========================================
+### Ingress 워크플로우 테스트
+### ===========================================
+
+### 1단계: Ingress 생성
+POST http://localhost:8080/api/create_ingress
+Content-Type: application/json
+
+{
+  "room_name": "workflow-ingress-room",
+  "ingress_type": "rtmp",
+  "metadata": {
+    "creator_identity": "workflow_streamer",
+    "title": "Workflow Ingress Test",
+    "description": "Complete ingress workflow test"
+  }
+}
+
+###
+
+### 2단계: 생성된 Ingress 목록 확인
+GET http://localhost:8080/api/ingress
+
+###
+
+### 3단계: 특정 Ingress 상세 조회 (위 결과에서 ingressId 복사 후 사용)
+# GET http://localhost:8080/api/ingress/{INGRESS_ID}
+
+###
+
+### 4단계: Ingress 삭제 (정리)
+# DELETE http://localhost:8080/api/ingress/{INGRESS_ID}
+
+### ===========================================
+### 응답 예시
+### ===========================================
+
+### Create Ingress 응답 예시:
+# {
+#   "ingress": {
+#     "url": "rtmp://localhost:1935/live",
+#     "streamKey": "SK_XXXXXXXXXX",
+#     "roomName": "ingress-test-room"  
+#   },
+#   "auth_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+#   "connection_details": {
+#     "ws_url": "ws://livekit:7880",
+#     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+#   }
+# }
+
+### List Ingress 응답 예시:
+# {
+#   "ingresses": [
+#     {
+#       "ingressId": "IN_XXXXXXXXXX",
+#       "name": "ingress-test-room",
+#       "roomName": "ingress-test-room",
+#       "participantIdentity": "obs_streamer (via OBS)",
+#       "participantName": "obs_streamer (via OBS)",
+#       "url": "rtmp://localhost:1935/live",
+#       "streamKey": "SK_XXXXXXXXXX",
+#       "status": "ENDPOINT_READY",
+#       "createdAt": ""
+#     }
+#   ],
+#   "total": 1
+# }

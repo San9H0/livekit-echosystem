@@ -1,3 +1,0 @@
-### LiveKit Token Request
-# @name getToken
-GET http://localhost:8080/getToken
