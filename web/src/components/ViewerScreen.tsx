@@ -10,6 +10,10 @@ interface ViewerScreenProps {
   onBack: () => void
 }
 
+interface HTMPCaptureableVideoElement extends HTMLVideoElement {
+  captureStream(): MediaStream;
+}
+
 function ViewerScreen({ room, onBack }: ViewerScreenProps) {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
@@ -19,7 +23,41 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
   const [currentVideoTrack, setCurrentVideoTrack] = useState<RemoteTrack | null>(null)
   
   const roomRef = useRef<Room | null>(null)
-  const videoElementRef = useRef<HTMLVideoElement>(null)
+  const videoElementRef = useRef<HTMPCaptureableVideoElement>(null)
+
+  // currentVideoTrack이 변경될 때마다 비디오 엘리먼트에 연결
+  useEffect(() => {
+    if (currentVideoTrack && videoElementRef.current) {
+      console.log('[ViewerScreen] 비디오 트랙을 화면에 연결 중...', {
+        trackSid: currentVideoTrack.sid,
+        roomName: room.name,
+        viewerName
+      })
+      
+      currentVideoTrack.attach(videoElementRef.current)
+      console.log('[ViewerScreen] 비디오 트랙 화면에 연결 완료:', {
+        trackSid: currentVideoTrack.sid,
+        roomName: room.name,
+        viewerName
+      })
+    }
+  }, [currentVideoTrack, room.name, viewerName])
+
+  // 컴포넌트 언마운트 시 정리
+  useEffect(() => {
+    return () => {
+      console.log('[ViewerScreen] 컴포넌트 언마운트 - 리소스 정리 중...')
+      
+      // LiveKit 연결 정리
+      if (roomRef.current) {
+        roomRef.current.disconnect().catch(err => {
+          console.error('[ViewerScreen] LiveKit 연결 해제 실패:', err)
+        })
+        roomRef.current = null
+        console.log('[ViewerScreen] LiveKit 연결 정리됨')
+      }
+    }
+  }, [])
 
   const joinRoom = async () => {
     if (!viewerName.trim()) {
@@ -97,16 +135,6 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
         
         if (track.kind === Track.Kind.Video) {
           setCurrentVideoTrack(track)
-          
-          // 비디오 엘리먼트에 트랙 연결
-          if (videoElementRef.current) {
-            track.attach(videoElementRef.current)
-            console.log('[LiveKit] 비디오 트랙 화면에 연결됨:', { 
-              trackSid: track.sid,
-              roomName: room.name,
-              viewerName
-            })
-          }
           
           // 실제 비디오 스트림 수신 시작 로그
           console.log('[LiveKit] 비디오 스트림 수신 시작:', {
@@ -320,28 +348,27 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
           {/* 비디오 플레이어 */}
           <div style={{ marginBottom: '20px' }}>
             <h3>방송 화면</h3>
+            <video 
+              ref={videoElementRef}
+              autoPlay
+              playsInline
+              style={{
+                width: '100%',
+                maxWidth: '800px',
+                height: 'auto',
+                backgroundColor: '#000',
+                borderRadius: '8px',
+                display: currentVideoTrack ? 'block' : 'none'
+              }}
+              onPlay={() => console.log('[ViewerScreen] 방송 비디오 재생 시작됨')}
+              onPause={() => console.log('[ViewerScreen] 방송 비디오 일시정지됨')}
+              onEnded={() => console.log('[ViewerScreen] 방송 비디오 종료됨')}
+              onError={(e) => console.error('[ViewerScreen] 방송 비디오 에러:', e)}
+            />
             {currentVideoTrack ? (
-              <div>
-                                 <video 
-                   ref={videoElementRef}
-                   autoPlay
-                   playsInline
-                   style={{
-                     width: '100%',
-                     maxWidth: '800px',
-                     height: 'auto',
-                     backgroundColor: '#000',
-                     borderRadius: '8px'
-                   }}
-                   onPlay={() => console.log('[ViewerScreen] 방송 비디오 재생 시작됨')}
-                   onPause={() => console.log('[ViewerScreen] 방송 비디오 일시정지됨')}
-                   onEnded={() => console.log('[ViewerScreen] 방송 비디오 종료됨')}
-                   onError={(e) => console.error('[ViewerScreen] 방송 비디오 에러:', e)}
-                 />
-                 <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-                   방송자로부터 수신 중인 비디오
-                 </p>
-              </div>
+              <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
+                방송자로부터 수신 중인 비디오
+              </p>
             ) : (
               <div style={{
                 width: '100%',

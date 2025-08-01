@@ -28,10 +28,17 @@ func main() {
 
 	// 환경 변수 가져오기
 	hostURL := os.Getenv("LIVEKIT_WS_URL")
+	clientWSURL := os.Getenv("LIVEKIT_CLIENT_WS_URL")
 	apiKey := os.Getenv("LIVEKIT_API_KEY")
 	apiSecret := os.Getenv("LIVEKIT_API_SECRET")
 
+	// 클라이언트용 WebSocket URL이 설정되지 않은 경우 기본값 사용
+	if clientWSURL == "" {
+		clientWSURL = "ws://localhost:7880"
+	}
+
 	fmt.Println("hostURL", hostURL)
+	fmt.Println("clientWSURL", clientWSURL)
 	fmt.Println("apiKey", apiKey)
 	fmt.Println("apiSecret", apiSecret)
 
@@ -43,7 +50,7 @@ func main() {
 	// 핸들러 생성
 	ingressHandler := handlers.NewIngressHandler(hostURL, apiKey, apiSecret)
 	tokenHandler := handlers.NewTokenHandler(apiKey, apiSecret)
-	streamHandler := handlers.NewStreamHandler(hostURL, apiKey, apiSecret)
+	streamHandler := handlers.NewStreamHandler(hostURL, clientWSURL, apiKey, apiSecret)
 
 	// 라우트 설정
 	routes.SetupRoutes(e, ingressHandler, tokenHandler, streamHandler)

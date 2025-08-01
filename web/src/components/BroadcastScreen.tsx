@@ -1,9 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import { saveFileToDB, loadFileFromDB } from '../lib/indexedDB'
 import { backendClient } from '../clients/backendClient'
+import { Room, RoomEvent, LocalVideoTrack, LocalAudioTrack, createLocalVideoTrack, createLocalAudioTrack, Track } from 'livekit-client'
 
 interface BroadcastScreenProps {
   onBack: () => void
+}
+
+interface HTMPCaptureableVideoElement extends HTMLVideoElement {
+  captureStream(): MediaStream;
 }
 
 function BroadcastScreen({ onBack }: BroadcastScreenProps) {
@@ -17,8 +22,9 @@ function BroadcastScreen({ onBack }: BroadcastScreenProps) {
   const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null)
   const [savedVideoPath, setSavedVideoPath] = useState<string>('')
   
-  const videoElementRef = useRef<HTMLVideoElement>(null)
+  const videoElementRef = useRef<HTMPCaptureableVideoElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const roomRef = useRef<Room | null>(null)
 
   // localStorage 키들
   const STORAGE_KEYS = {
@@ -100,6 +106,32 @@ function BroadcastScreen({ onBack }: BroadcastScreenProps) {
     }
   }
 
+  const createMediaStream = async (selectedVideoFile: File) : Promise<MediaStream> => {
+    return new Promise((resolve, reject) => {
+      if (!videoElementRef.current) {
+        reject(new Error('비디오 엘리먼트를 찾을 수 없습니다.'))
+        return;
+      }
+      videoElementRef.current.src = URL.createObjectURL(selectedVideoFile)
+      videoElementRef.current.muted = true
+      videoElementRef.current.loop = true
+      videoElementRef.current.playsInline = true
+      videoElementRef.current.autoplay = true
+
+      videoElementRef.current.onloadeddata = () => {
+        console.log('[BroadcastScreen] 미리보기 비디오 데이터 로드 완료')
+        const stream = videoElementRef.current!.captureStream();
+        if (!stream) {
+          return;
+        }
+        resolve(stream);
+      }
+
+      videoElementRef.current.load();
+    })
+
+  }
+
   const startBroadcast = async () => {
     if (!roomName.trim() || !broadcasterName.trim()) {
       setError('방 이름과 방송자 이름을 입력해주세요.')
@@ -126,30 +158,113 @@ function BroadcastScreen({ onBack }: BroadcastScreenProps) {
 
       // 미리보기용 비디오 엘리먼트 설정
       try {
+
         if (videoElementRef.current) {
-          // 비디오 파일을 직접 미리보기 엘리먼트에 설정
-          videoElementRef.current.src = URL.createObjectURL(selectedVideoFile)
-          videoElementRef.current.muted = true
-          videoElementRef.current.loop = true
-          videoElementRef.current.playsInline = true
-          videoElementRef.current.autoplay = true
+          // LiveKit 방 연결 및 스트리밍 시작
+          console.log('[BroadcastScreen] LiveKit 방 연결 시작...')
           
-          // 비디오 재생 시작
-          await videoElementRef.current.play()
-          console.log('[BroadcastScreen] 비디오 파일 미리보기 연결됨 및 재생 시작')
+          // 1. 백엔드에서 스트림 생성 요청
+          const streamResponse = await backendClient.createStream({
+            room_name: roomName,
+            metadata: {
+              creator_identity: broadcasterName,
+              title: roomName,
+              type: 'video'
+            }
+          })
           
-          // 미리보기 비디오 이벤트 리스너 추가
-          videoElementRef.current.onended = () => {
-            console.log('[BroadcastScreen] 미리보기 비디오 재생 종료됨 (루프 예정)')
+          console.log('[BroadcastScreen] 스트림 생성 성공:', streamResponse)
+          
+          // 2. LiveKit 룸 생성
+          console.log('[LiveKit] 룸 생성...')
+          const room = new Room()
+          roomRef.current = room
+          
+          // 3. 미디어 트랙 생성
+          console.log('[BroadcastScreen] 미디어 트랙 생성 시작...')
+          
+          let videoTrack: LocalVideoTrack | null = null
+          let audioTrack: LocalAudioTrack | null = null
+          
+          if (videoEnabled) {
+            console.log('[BroadcastScreen] 비디오 파일로 트랙 생성 중...', selectedVideoFile.name)
+            
+            // 비디오 파일에서 MediaStream 생성 (사용자 함수 사용)
+            const videoStream = await createMediaStream(selectedVideoFile)
+            console.log('[BroadcastScreen] 비디오 파일에서 MediaStream 생성 완료')
+            
+            // MediaStream에서 LocalVideoTrack 생성
+            videoTrack = new LocalVideoTrack(videoStream.getVideoTracks()[0])
+            
+            console.log('[BroadcastScreen] 비디오 파일 트랙 생성 성공')
+            console.log('[BroadcastScreen] 비디오 트랙 정보:', {
+              id: videoTrack.sid,
+              kind: videoTrack.kind,
+              source: videoTrack.source
+            })
           }
           
-          videoElementRef.current.onpause = () => {
-            console.log('[BroadcastScreen] 미리보기 비디오 일시정지됨')
+          if (audioEnabled) {
+            console.log('[BroadcastScreen] 오디오 트랙 생성 중...')
+            audioTrack = await createLocalAudioTrack()
+            console.log('[BroadcastScreen] 오디오 트랙 생성 성공')
           }
           
-          videoElementRef.current.onplay = () => {
-            console.log('[BroadcastScreen] 미리보기 비디오 재생 시작됨')
+          console.log('[BroadcastScreen] 미디어 트랙 생성 완료: 비디오=' + !!videoTrack + ', 오디오=' + !!audioTrack)
+          
+          // 4. LiveKit 룸 연결
+          console.log('[LiveKit] 룸 연결 중...')
+          console.log('[BroadcastScreen] 연결 정보:', {
+            wsUrl: streamResponse.connection_details.ws_url,
+            tokenLength: streamResponse.connection_details.token.length
+          })
+          
+          await room.connect(streamResponse.connection_details.ws_url, streamResponse.connection_details.token, {
+            autoSubscribe: false
+          })
+          
+          console.log('[LiveKit] 룸 연결 성공')
+          
+          // 5. 트랙 발행
+          if (videoTrack) {
+            console.log('[LiveKit] 비디오 트랙 발행 시작...')
+            await room.localParticipant.publishTrack(videoTrack)
+            console.log('[LiveKit] 비디오 트랙 발행 성공')
           }
+          
+          if (audioTrack) {
+            console.log('[LiveKit] 오디오 트랙 발행 시작...')
+            await room.localParticipant.publishTrack(audioTrack)
+            console.log('[LiveKit] 오디오 트랙 발행 성공')
+          }
+
+        
+          await videoElementRef.current.play();
+
+          
+          // 6. 이벤트 리스너 설정
+          room.on(RoomEvent.TrackPublished, (publication, participant) => {
+            console.log('[LiveKit] 트랙 발행됨:', {
+              participant: participant.identity,
+              trackSid: publication.trackSid,
+              trackType: publication.kind
+            })
+          })
+          
+          room.on(RoomEvent.TrackUnpublished, (publication, participant) => {
+            console.log('[LiveKit] 트랙 발행 해제됨:', {
+              participant: participant.identity,
+              trackSid: publication.trackSid
+            })
+          })
+          
+          room.on(RoomEvent.ParticipantConnected, (participant) => {
+            console.log('[LiveKit] 참가자 연결됨:', participant.identity)
+          })
+          
+          room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+            console.log('[LiveKit] 참가자 연결 해제됨:', participant.identity)
+          })
 
           // 방송 상태를 연결됨으로 설정
           setIsConnected(true)
@@ -178,9 +293,20 @@ function BroadcastScreen({ onBack }: BroadcastScreenProps) {
     }
   }
 
+  // 비디오 파일에서 MediaStream 생성하는 함수
+
+
   const stopBroadcast = async () => {
     try {
       console.log('[BroadcastScreen] 방송 종료 시작')
+      
+      // LiveKit 연결 해제
+      if (roomRef.current) {
+        console.log('[LiveKit] 룸 연결 해제 중...')
+        await roomRef.current.disconnect()
+        roomRef.current = null
+        console.log('[LiveKit] 룸 연결 해제 완료')
+      }
       
       // 미리보기 비디오 정리
       if (videoElementRef.current) {
@@ -209,6 +335,15 @@ function BroadcastScreen({ onBack }: BroadcastScreenProps) {
     
     return () => {
       console.log('[BroadcastScreen] 컴포넌트 언마운트 - 리소스 정리 중...')
+      
+      // LiveKit 연결 정리
+      if (roomRef.current) {
+        roomRef.current.disconnect().catch(err => {
+          console.error('[BroadcastScreen] LiveKit 연결 해제 실패:', err)
+        })
+        roomRef.current = null
+        console.log('[BroadcastScreen] LiveKit 연결 정리됨')
+      }
       
       // 미리보기 비디오 정리
       if (videoElementRef.current) {

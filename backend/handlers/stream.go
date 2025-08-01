@@ -73,17 +73,19 @@ type ParticipantInfo struct {
 
 // StreamHandler 구조체
 type StreamHandler struct {
-	hostURL   string
-	apiKey    string
-	apiSecret string
+	hostURL     string
+	clientWSURL string
+	apiKey      string
+	apiSecret   string
 }
 
 // NewStreamHandler 생성자
-func NewStreamHandler(hostURL, apiKey, apiSecret string) *StreamHandler {
+func NewStreamHandler(hostURL, clientWSURL, apiKey, apiSecret string) *StreamHandler {
 	return &StreamHandler{
-		hostURL:   hostURL,
-		apiKey:    apiKey,
-		apiSecret: apiSecret,
+		hostURL:     hostURL,
+		clientWSURL: clientWSURL,
+		apiKey:      apiKey,
+		apiSecret:   apiSecret,
 	}
 }
 
@@ -148,7 +150,7 @@ func (h *StreamHandler) CreateStream(c echo.Context) error {
 	response := CreateStreamResponse{
 		AuthToken: authToken,
 		ConnectionDetails: ConnectionDetails{
-			WSURL: h.hostURL,
+			WSURL: h.clientWSURL,
 			Token: livekitToken,
 		},
 	}
@@ -208,7 +210,7 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 	response := JoinStreamResponse{
 		AuthToken: authToken,
 		ConnectionDetails: ConnectionDetails{
-			WSURL: h.hostURL,
+			WSURL: h.clientWSURL,
 			Token: livekitToken,
 		},
 	}

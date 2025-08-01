@@ -12,6 +12,7 @@ services:
       - "8080:8080"
     environment:
       - LIVEKIT_WS_URL=${LIVEKIT_WS_URL}
+      - LIVEKIT_CLIENT_WS_URL=${LIVEKIT_CLIENT_WS_URL:-ws://localhost:7880} # 클라이언트용 WebSocket URL이 설정되지 않은 경우 기본값 사용
       - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
       - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
     depends_on:
@@ -62,6 +63,7 @@ services:
       - redis
     networks:
       - livekit-network
+    restart: unless-stopped
 
   ffmpeg:
     image: jrottenberg/ffmpeg:6.1.2-ubuntu2404
