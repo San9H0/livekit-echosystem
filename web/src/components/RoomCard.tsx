@@ -1,17 +1,23 @@
-import { Room } from '../types/Room'
+import type { Room } from '../clients/backendClient'
 
 interface RoomCardProps {
   room: Room
+  onJoinRoom: (room: Room) => void
 }
 
-function RoomCard({ room }: RoomCardProps) {
+function RoomCard({ room, onJoinRoom }: RoomCardProps) {
   const formatDate = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleString('ko-KR')
   }
 
   const handleJoinRoom = () => {
-    // 나중에 방 입장 기능 구현
-    console.log('Joining room:', room.name)
+    console.log('[LiveKit] 방 입장 시도:', { 
+      roomName: room.name, 
+      participantCount: room.num_participants,
+      maxParticipants: room.max_participants,
+      metadata: room.metadata
+    })
+    onJoinRoom(room)
   }
 
   const getMetadataDisplay = () => {

@@ -1,4 +1,4 @@
-import { Room } from '../types/Room'
+import type { Room } from '../clients/backendClient'
 import RoomCard from './RoomCard'
 
 interface RoomListProps {
@@ -6,9 +6,10 @@ interface RoomListProps {
   loading: boolean
   error: string | null
   onRefresh: () => void
+  onJoinRoom: (room: Room) => void
 }
 
-function RoomList({ rooms, loading, error, onRefresh }: RoomListProps) {
+function RoomList({ rooms, loading, error, onRefresh, onJoinRoom }: RoomListProps) {
   if (loading) {
     return (
       <div className="loading">
@@ -88,7 +89,7 @@ function RoomList({ rooms, loading, error, onRefresh }: RoomListProps) {
       
       <div className="room-list">
         {rooms.map((room) => (
-          <RoomCard key={room.sid} room={room} />
+          <RoomCard key={room.name} room={room} onJoinRoom={onJoinRoom} />
         ))}
       </div>
     </div>
