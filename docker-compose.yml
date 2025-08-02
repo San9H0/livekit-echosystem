@@ -55,23 +55,12 @@ services:
       - "50010:50010/udp"
     environment:
       - LIVEKIT_KEYS=${LIVEKIT_KEYS}
+      - LIVEKIT_LOGGING_LEVEL=info
     volumes:
       - ./livekit.config.docker.yaml:/config.yaml
     command: ["--config", "/config.yaml"]
-    #entrypoint: ["sh", "-c", "sleep infinity"]
     depends_on:
       - redis
-    networks:
-      - livekit-network
-    restart: unless-stopped
-
-  ffmpeg:
-    image: jrottenberg/ffmpeg:6.1.2-ubuntu2404
-    container_name: ffmpeg-service
-    #command: ["sleep", "infinity"]
-    entrypoint: ["sh", "-c", "sleep infinity"]
-    volumes:
-      - ./ffmpeg:/workspace
     networks:
       - livekit-network
     restart: unless-stopped
