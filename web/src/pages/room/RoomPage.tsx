@@ -43,10 +43,20 @@ const RoomPage = () => {
     const localVideoRef = useRef<HTMPCaptureableVideoElement>(null)
     const mediaBlobRef = useRef<string | null>(null)
 
-    console.log("[TESTDEBUG] initialize remoteVideoRefs: ", remoteVideoRefs.current.size)
+    useEffect(() => {
+        console.log("[TESTDEBUG] RoomPage mounted.. remoteVideoRefs:", remoteVideoRefs.current.size)
+    })
 
-    const handleNavigateToPublisher = () => {
-        console.log('Publisher 페이지로 이동 (아직 구현되지 않음)')
+    const createVideoElement = () => {
+        const videoElement = document.createElement('video')
+        videoElement.autoplay = true
+        videoElement.playsInline = true
+        videoElement.style.width = '100%'
+        videoElement.style.height = '100%'
+        videoElement.style.objectFit = 'cover'
+
+
+        return videoElement
     }
 
     const handleJoinRoom = async (userData: JoinRoomData) => {
@@ -75,8 +85,6 @@ const RoomPage = () => {
                 dynacast: true,
             })
 
-            console.log('[TESTDEBUG] 1 livekitRoomInstance.remoteParticipants:', livekitRoomInstance.remoteParticipants)
-
             // 이벤트 리스너 설정
             livekitRoomInstance.on(RoomEvent.ParticipantConnected, handleParticipantConnected)
             livekitRoomInstance.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
@@ -88,11 +96,8 @@ const RoomPage = () => {
             // 방 연결
             await livekitRoomInstance.connect(response.connection_details.ws_url, response.connection_details.token)
 
-            console.log('[TESTDEBUG] 2 livekitRoomInstance.remoteParticipants2:', livekitRoomInstance.remoteParticipants)
-
             setLivekitRoom(livekitRoomInstance)
 
-            console.log('[TESTDEBUG] room joinType:', userData.joinType)
             // 로컬 참가자 추가 (참여하기일 때만)
             let localParticipant: Participant | null = null
             if (userData.joinType === 'participate') {
@@ -110,19 +115,7 @@ const RoomPage = () => {
             // 기존에 참여 중인 참가자들 추가
             const existingParticipants: Participant[] = []
 
-            console.log('[TESTDEBUG] livekitRoomInstance.remoteParticipants.forEach:', livekitRoomInstance.remoteParticipants)
             livekitRoomInstance.remoteParticipants.forEach((participant) => {
-                // 기존 참가자에 대해서도 비디오 요소를 미리 생성
-                const videoElement = document.createElement('video')
-                videoElement.autoplay = true
-                videoElement.playsInline = true
-                videoElement.style.width = '100%'
-                videoElement.style.height = '100%'
-                videoElement.style.objectFit = 'cover'
-
-                remoteVideoRefs.current.set(participant.identity, videoElement)
-
-                console.log('[Livekit] 기존 참가자 발견:', participant.identity)
                 const existingParticipant: Participant = {
                     id: participant.identity,
                     name: participant.identity,
@@ -134,10 +127,6 @@ const RoomPage = () => {
                 }
                 existingParticipants.push(existingParticipant)
             })
-
-            console.log("[TESTDEBUG] existingParticipants:", existingParticipants.length)
-            console.log("[TESTDEBUG] remoteVideoRefs.current.size:", remoteVideoRefs.current.size)
-            console.log("[TESTDEBUG] remoteVideoRefs.current의 모든 키:", Array.from(remoteVideoRefs.current.keys()))
 
             // 로컬 참가자와 기존 참가자들을 모두 추가
             const allParticipants = localParticipant ? [localParticipant, ...existingParticipants] : existingParticipants
@@ -159,7 +148,6 @@ const RoomPage = () => {
         const setupMediaStream = async () => {
             if (userSettings?.joinType === 'participate' && localVideoRef.current && userSettings?.mediaFile && livekitRoom && !localVideoReady) {
                 try {
-                    console.log('[TESTDEBUG] createMediaStreamFromFile')
                     const mediaStream = await createMediaStreamFromFile(userSettings.mediaFile, localVideoRef)
                     const videoTrack = new LocalVideoTrack(mediaStream.getVideoTracks()[0])
                     const audioTrack = new LocalAudioTrack(mediaStream.getAudioTracks()[0])
@@ -178,17 +166,13 @@ const RoomPage = () => {
         setupMediaStream()
     }, [localVideoRef.current, userSettings?.mediaFile, userSettings?.joinType, livekitRoom, localVideoReady])
 
-    // remoteVideoRefs가 초기화되지 않도록 보존
-    useEffect(() => {
-        console.log("[TESTDEBUG] useEffect - remoteVideoRefs.current.size:", remoteVideoRefs.current.size)
-    })
-
     // 컴포넌트 언마운트 시 정리
     useEffect(() => {
+        if (!livekitRoom) {
+            return;
+        }
+
         return () => {
-            if (livekitRoom) {
-                livekitRoom.disconnect()
-            }
             if (mediaBlobRef.current) {
                 URL.revokeObjectURL(mediaBlobRef.current)
             }
@@ -207,21 +191,6 @@ const RoomPage = () => {
     }, [livekitRoom])
 
     const handleParticipantConnected = (participant: RemoteParticipant) => {
-        console.log('[TESTDEBUG] handleParticipantConnected participant:', participant)
-        console.log('[Livekit] Participant connected:', participant.identity)
-        console.log('[Livekit] 새로운 참가자 발견:', participant.identity)
-
-        // 새로운 참가자에 대한 비디오 요소를 미리 생성
-        const videoElement = document.createElement('video')
-        videoElement.autoplay = true
-        videoElement.playsInline = true
-        videoElement.style.width = '100%'
-        videoElement.style.height = '100%'
-        videoElement.style.objectFit = 'cover'
-
-        // Map에 미리 생성된 HTMLVideoElement 저장
-        remoteVideoRefs.current.set(participant.identity, videoElement)
-
         const newParticipant: Participant = {
             id: participant.identity,
             name: participant.identity,
@@ -232,7 +201,6 @@ const RoomPage = () => {
             isViewer: !(participant.permissions?.canPublish ?? false)
         }
         setParticipants(prev => [...prev, newParticipant])
-        console.log("[TESTDEBUG] participants:", participants.length, ", map.length:", remoteVideoRefs.current.size)
     }
 
     const handleParticipantDisconnected = (participant: RemoteParticipant) => {
@@ -254,10 +222,6 @@ const RoomPage = () => {
     }
 
     const handleTrackSubscribed = (track: RemoteTrack, publication: TrackPublication, participant: RemoteParticipant) => {
-        console.log('[Livekit] Track subscribed:', track.kind, participant.identity)
-        console.log("[TESTDEBUG] handleTrackSubscribed 시작 - remoteVideoRefs.current.size:", remoteVideoRefs.current.size)
-        console.log("[TESTDEBUG] handleTrackSubscribed - Map의 모든 키:", Array.from(remoteVideoRefs.current.keys()))
-
         setParticipants(prev => prev.map(p => {
             if (p.id === participant.identity) {
                 if (track.kind === Track.Kind.Video) {
@@ -272,14 +236,13 @@ const RoomPage = () => {
         }))
 
         // 미리 생성된 비디오 요소에 트랙 할당
-        console.log("[TESTDEBUG] onTrack.. remoteVideoRefs.current.size:", remoteVideoRefs.current.size)
         const videoElement = remoteVideoRefs.current.get(participant.identity)
-        console.log(`[TESTDEBUG] onTrack videoElement ${track.kind} :`, videoElement)
-
         if (videoElement) {
-            console.log(`[Livekit] ${track.kind} 트랙을 요소에 할당:`, participant.identity)
-            track.attach(videoElement)
+            track.attach(videoElement);
         } else {
+            const newVideoElement = createVideoElement();
+            remoteVideoRefs.current.set(participant.identity, newVideoElement);
+            track.attach(newVideoElement);
             console.log(`[Livekit] ${track.kind} 요소를 찾을 수 없음:`, participant.identity)
         }
     }
@@ -291,6 +254,15 @@ const RoomPage = () => {
             if (p.id === participant.identity) {
                 if (track.kind === Track.Kind.Video) {
                     console.log('[Livekit] 비디오 트랙 구독 해제:', participant.identity)
+                    // 비디오 요소 정리
+                    const videoElement = remoteVideoRefs.current.get(participant.identity)
+                    if (videoElement) {
+                        videoElement.srcObject = null
+                        if (videoElement.parentElement) {
+                            videoElement.parentElement.removeChild(videoElement)
+                        }
+                        remoteVideoRefs.current.delete(participant.identity)
+                    }
                     return { ...p, videoTrack: undefined, isVideoEnabled: false }
                 } else if (track.kind === Track.Kind.Audio) {
                     console.log('[Livekit] 오디오 트랙 구독 해제:', participant.identity)
@@ -457,7 +429,7 @@ const RoomPage = () => {
             }}>
                 <HeaderNavigation
                     onCreateRoom={() => console.log('방 만들기 (아직 구현되지 않음)')}
-                    onNavigateToPublisher={handleNavigateToPublisher}
+                    onNavigateToPublisher={() => { }}
                 />
                 <Footer />
 
@@ -507,7 +479,7 @@ const RoomPage = () => {
             {/* 공통 헤더 네비게이션 */}
             <HeaderNavigation
                 onCreateRoom={() => console.log('방 만들기 (아직 구현되지 않음)')}
-                onNavigateToPublisher={handleNavigateToPublisher}
+                onNavigateToPublisher={() => { }}
             />
 
             {/* 방 정보 표시 영역 */}
@@ -543,131 +515,154 @@ const RoomPage = () => {
                     display: 'grid',
                     gap: '10px',
                     padding: '20px',
-                    ...getGridLayout(participants.length)
+                    ...getGridLayout(participants.filter(p => p.isLocal || remoteVideoRefs.current.has(p.id)).length)
                 }}>
-                    {participants.map((participant, index) => (
-                        <div key={participant.id} style={{
-                            position: 'relative',
-                            backgroundColor: '#1a1a1a',
-                            borderRadius: '8px',
-                            overflow: 'hidden',
-                            ...getParticipantGridPosition(index, participants.length)
-                        }}>
-                            {participant.isLocal ? (
-                                <video
-                                    ref={el => {
-                                        localVideoRef.current = el as HTMPCaptureableVideoElement
-                                    }}
-                                    autoPlay
-                                    playsInline
-                                    muted={true} // 로컬 참가자만 음소거 (자기 자신의 소리 방지)
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover'
-                                    }}
-                                />
-                            ) : (
-                                <div
-                                    ref={el => {
-                                        if (el) {
-                                            const videoElement = remoteVideoRefs.current.get(participant.id)
-                                            if (videoElement && el.firstChild !== videoElement) {
-                                                el.innerHTML = ''
-                                                el.appendChild(videoElement)
+                    {participants.map((participant, index) => {
+                        // remoteVideoRefs에 key가 존재하지 않으면 렌더링하지 않음
+                        if (!participant.isLocal && !remoteVideoRefs.current.has(participant.id)) {
+                            return null
+                        }
+
+                        // 필터링된 참가자들 중에서의 인덱스 계산
+                        const filteredParticipants = participants.filter(p => p.isLocal || remoteVideoRefs.current.has(p.id))
+                        const filteredIndex = filteredParticipants.findIndex(p => p.id === participant.id)
+
+                        console.log("[TESTDEBUG] RoomPage render participant:", participant.id, ", len:", participants.length, ", filteredIndex:", filteredIndex)
+
+                        return (
+                            <div key={participant.id} style={{
+                                position: 'relative',
+                                backgroundColor: '#1a1a1a',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                ...getParticipantGridPosition(filteredIndex, filteredParticipants.length)
+                            }}>
+                                {participant.isLocal ? (
+                                    <video
+                                        ref={el => {
+                                            localVideoRef.current = el as HTMPCaptureableVideoElement
+                                        }}
+                                        autoPlay
+                                        playsInline
+                                        muted={true} // 로컬 참가자만 음소거 (자기 자신의 소리 방지)
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            objectFit: 'cover'
+                                        }}
+                                    />
+                                ) : (
+                                    <div
+                                        ref={el => {
+                                            if (el) {
+                                                const videoElement = remoteVideoRefs.current.get(participant.id)
+                                                if (videoElement) {
+                                                    // 이미 추가된 비디오 요소가 있는지 확인
+                                                    const existingVideo = el.querySelector('video')
+                                                    if (!existingVideo || existingVideo !== videoElement) {
+                                                        // 기존 내용을 완전히 제거
+                                                        el.innerHTML = ''
+                                                        // 비디오 요소를 추가하고 스타일 적용
+                                                        videoElement.style.width = '100%'
+                                                        videoElement.style.height = '100%'
+                                                        videoElement.style.objectFit = 'cover'
+                                                        el.appendChild(videoElement)
+                                                    }
+                                                }
                                             }
-                                        }
-                                    }}
-                                    style={{
-                                        width: '100%',
-                                        height: '100%'
-                                    }}
-                                />
-                            )}
-
-                            {/* 참가자 이름 오버레이 */}
-                            <div style={{
-                                position: 'absolute',
-                                bottom: '10px',
-                                left: '10px',
-                                backgroundColor: 'rgba(0,0,0,0.7)',
-                                color: 'white',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                fontSize: '12px',
-                                fontWeight: 'bold'
-                            }}>
-                                {participant.name}
-                                {participant.isLocal && ' (나)'}
-                                <span style={{
-                                    marginLeft: '4px',
-                                    fontSize: '10px',
-                                    opacity: 0.8,
-                                    color: participant.isViewer ? '#ffd700' : '#00ff00'
-                                }}>
-                                    {participant.isViewer ? '👁️ 시청자' : '🎥 참여자'}
-                                </span>
-                            </div>
-
-                            {/* 오디오/비디오 상태 표시 */}
-                            <div style={{
-                                position: 'absolute',
-                                top: '10px',
-                                right: '10px',
-                                display: 'flex',
-                                gap: '5px'
-                            }}>
-                                {!participant.isAudioEnabled && (
-                                    <div style={{
-                                        backgroundColor: 'rgba(0,0,0,0.7)',
-                                        color: 'white',
-                                        padding: '4px',
-                                        borderRadius: '50%',
-                                        width: '24px',
-                                        height: '24px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '12px'
-                                    }}>
-                                        🔇
-                                    </div>
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            position: 'relative'
+                                        }}
+                                    />
                                 )}
-                                {!participant.isVideoEnabled && (
-                                    <div style={{
-                                        backgroundColor: 'rgba(0,0,0,0.7)',
-                                        color: 'white',
-                                        padding: '4px',
-                                        borderRadius: '50%',
-                                        width: '24px',
-                                        height: '24px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '12px'
-                                    }}>
-                                        📹
-                                    </div>
-                                )}
-                            </div>
 
-                            {/* 미디어 파일 재생 표시 */}
-                            {participant.isLocal && localVideoReady && (
+                                {/* 참가자 이름 오버레이 */}
                                 <div style={{
                                     position: 'absolute',
-                                    top: '10px',
+                                    bottom: '10px',
                                     left: '10px',
                                     backgroundColor: 'rgba(0,0,0,0.7)',
                                     color: 'white',
                                     padding: '4px 8px',
                                     borderRadius: '4px',
-                                    fontSize: '12px'
+                                    fontSize: '12px',
+                                    fontWeight: 'bold'
                                 }}>
-                                    미디어 파일 재생 중
+                                    {participant.name}
+                                    {participant.isLocal && ' (나)'}
+                                    <span style={{
+                                        marginLeft: '4px',
+                                        fontSize: '10px',
+                                        opacity: 0.8,
+                                        color: participant.isViewer ? '#ffd700' : '#00ff00'
+                                    }}>
+                                        {participant.isViewer ? '👁️ 시청자' : '🎥 참여자'}
+                                    </span>
                                 </div>
-                            )}
-                        </div>
-                    ))}
+
+                                {/* 오디오/비디오 상태 표시 */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '10px',
+                                    right: '10px',
+                                    display: 'flex',
+                                    gap: '5px'
+                                }}>
+                                    {!participant.isAudioEnabled && (
+                                        <div style={{
+                                            backgroundColor: 'rgba(0,0,0,0.7)',
+                                            color: 'white',
+                                            padding: '4px',
+                                            borderRadius: '50%',
+                                            width: '24px',
+                                            height: '24px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '12px'
+                                        }}>
+                                            🔇
+                                        </div>
+                                    )}
+                                    {!participant.isVideoEnabled && (
+                                        <div style={{
+                                            backgroundColor: 'rgba(0,0,0,0.7)',
+                                            color: 'white',
+                                            padding: '4px',
+                                            borderRadius: '50%',
+                                            width: '24px',
+                                            height: '24px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '12px'
+                                        }}>
+                                            📹
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* 미디어 파일 재생 표시 */}
+                                {participant.isLocal && localVideoReady && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '10px',
+                                        left: '10px',
+                                        backgroundColor: 'rgba(0,0,0,0.7)',
+                                        color: 'white',
+                                        padding: '4px 8px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px'
+                                    }}>
+                                        미디어 파일 재생 중
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
                 </div>
 
                 {/* 우측 패널 */}
