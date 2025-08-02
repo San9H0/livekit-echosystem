@@ -21,9 +21,9 @@ func SetupRoutes(e *echo.Echo, ingressHandler *handlers.IngressHandler, tokenHan
 	e.GET("/getToken", tokenHandler.GetToken)
 
 	// 스트림 관련 라우트
-	api.POST("/create_stream", streamHandler.CreateStream)     // 스트림 생성
-	api.POST("/join_stream", streamHandler.JoinStream)         // 스트림 참여
-	api.GET("/streams", streamHandler.ListStreams)             // 모든 스트림 조회
-	api.GET("/streams/:roomName", streamHandler.GetStream)     // 특정 스트림 조회
-	api.DELETE("/streams/:roomName", streamHandler.DeleteStream) // 스트림 삭제
+	api.POST("/create_stream", streamHandler.CreateStream)      // 스트림 생성
+	api.POST("/join_stream", streamHandler.JoinStream)          // 스트림 참여
+	api.GET("/streams", streamHandler.ListStreams)              // 모든 스트림 조회
+	api.GET("/streams/:room_id", streamHandler.GetStream)       // 특정 스트림 조회
+	api.DELETE("/streams/:room_id", streamHandler.DeleteStream) // 스트림 삭제
 }

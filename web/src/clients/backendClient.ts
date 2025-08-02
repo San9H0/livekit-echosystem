@@ -3,7 +3,7 @@ const API_BASE_URL = 'http://localhost:8080/api'
 
 // Room 타입 정의
 export interface Room {
-  name: string
+  room_id: string
   metadata: { [key: string]: any } | null
   num_participants: number
   creation_time: number
@@ -13,16 +13,18 @@ export interface Room {
 
 // 스트림 생성 요청 타입
 export interface CreateStreamRequest {
-  room_name: string
   metadata: {
     creator_identity: string
     title: string
+    description: string
     type: string
+    isPrivate: boolean
   }
 }
 
 // 스트림 생성 응답 타입
 export interface CreateStreamResponse {
+  room_id: string
   connection_details: {
     ws_url: string
     token: string
@@ -31,8 +33,8 @@ export interface CreateStreamResponse {
 
 // 시청자 참여 요청 타입
 export interface JoinStreamRequest {
+  room_id: string
   identity: string
-  room_name: string
 }
 
 // 시청자 참여 응답 타입
@@ -64,7 +66,7 @@ export class BackendClient {
   async createStream(request: CreateStreamRequest): Promise<CreateStreamResponse> {
     const url = `${this.baseUrl}/create_stream`
     const requestBody = JSON.stringify(request)
-    
+
     // 요청 로그
     console.log('[BackendClient] 스트림 생성 요청 전송:', {
       url,
@@ -127,7 +129,7 @@ export class BackendClient {
    */
   async getStreams(): Promise<StreamsResponse> {
     const url = `${this.baseUrl}/streams`
-    
+
     // 요청 로그
     console.log('[BackendClient] 방 목록 조회 요청 전송:', {
       url,
@@ -137,7 +139,7 @@ export class BackendClient {
 
     try {
       const response = await fetch(url)
-      
+
       // 응답 로그
       console.log('[BackendClient] 방 목록 조회 응답 수신:', {
         url,
@@ -192,7 +194,7 @@ export class BackendClient {
   async joinStream(request: JoinStreamRequest): Promise<JoinStreamResponse> {
     const url = `${this.baseUrl}/join_stream`
     const requestBody = JSON.stringify(request)
-    
+
     // 요청 로그
     console.log('[BackendClient] 시청자 참여 요청 전송:', {
       url,
@@ -242,6 +244,64 @@ export class BackendClient {
       return responseData
     } catch (error) {
       console.error('[BackendClient] 시청자 참여 네트워크 오류:', {
+        url,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date().toISOString()
+      })
+      throw error
+    }
+  }
+
+  /**
+   * 방 삭제
+   */
+  async deleteRoom(roomName: string): Promise<void> {
+    const url = `${this.baseUrl}/streams/${roomName}`
+
+    // 요청 로그
+    console.log('[BackendClient] 방 삭제 요청 전송:', {
+      url,
+      method: 'DELETE',
+      timestamp: new Date().toISOString()
+    })
+
+    try {
+      const response = await fetch(url, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      // 응답 로그
+      console.log('[BackendClient] 방 삭제 응답 수신:', {
+        url,
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        timestamp: new Date().toISOString()
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[BackendClient] 방 삭제 실패:', {
+          url,
+          status: response.status,
+          statusText: response.statusText,
+          errorBody: errorText,
+          timestamp: new Date().toISOString()
+        })
+        throw new Error(`Failed to delete room: ${response.status} - ${errorText}`)
+      }
+
+      console.log('[BackendClient] 방 삭제 성공:', {
+        url,
+        status: response.status,
+        roomName,
+        timestamp: new Date().toISOString()
+      })
+    } catch (error) {
+      console.error('[BackendClient] 방 삭제 네트워크 오류:', {
         url,
         error: error instanceof Error ? error.message : String(error),
         timestamp: new Date().toISOString()

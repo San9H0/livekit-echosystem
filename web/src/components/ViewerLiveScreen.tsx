@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { Room, RoomEvent, RemoteParticipant, RemoteTrack, Track } from 'livekit-client'
-import { backendClient, type JoinStreamRequest } from '../clients/backendClient'
+import { backendClient } from '../clients/backendClient'
 
-interface ViewerScreenProps {
+interface ViewerLiveScreenProps {
   room: {
     name: string
     metadata: { [key: string]: any } | null
   }
+  viewerName: string
   onBack: () => void
 }
 
@@ -14,28 +15,29 @@ interface HTMPCaptureableVideoElement extends HTMLVideoElement {
   captureStream(): MediaStream;
 }
 
-function ViewerScreen({ room, onBack }: ViewerScreenProps) {
+function ViewerLiveScreen({ room, viewerName, onBack }: ViewerLiveScreenProps) {
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [viewerName, setViewerName] = useState('')
   const [participants, setParticipants] = useState<RemoteParticipant[]>([])
   const [currentVideoTrack, setCurrentVideoTrack] = useState<RemoteTrack | null>(null)
+  const [currentAudioTrack, setCurrentAudioTrack] = useState<RemoteTrack | null>(null)
   
   const roomRef = useRef<Room | null>(null)
   const videoElementRef = useRef<HTMPCaptureableVideoElement>(null)
+  const audioElementRef = useRef<HTMLAudioElement>(null)
 
   // currentVideoTrack이 변경될 때마다 비디오 엘리먼트에 연결
   useEffect(() => {
     if (currentVideoTrack && videoElementRef.current) {
-      console.log('[ViewerScreen] 비디오 트랙을 화면에 연결 중...', {
+      console.log('[ViewerLiveScreen] 비디오 트랙을 화면에 연결 중...', {
         trackSid: currentVideoTrack.sid,
         roomName: room.name,
         viewerName
       })
       
       currentVideoTrack.attach(videoElementRef.current)
-      console.log('[ViewerScreen] 비디오 트랙 화면에 연결 완료:', {
+      console.log('[ViewerLiveScreen] 비디오 트랙 화면에 연결 완료:', {
         trackSid: currentVideoTrack.sid,
         roomName: room.name,
         viewerName
@@ -43,41 +45,54 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
     }
   }, [currentVideoTrack, room.name, viewerName])
 
+  // currentAudioTrack이 변경될 때마다 오디오 엘리먼트에 연결
+  useEffect(() => {
+    if (currentAudioTrack && audioElementRef.current) {
+      console.log('[ViewerLiveScreen] 오디오 트랙을 화면에 연결 중...', {
+        trackSid: currentAudioTrack.sid,
+        roomName: room.name,
+        viewerName
+      })
+      
+      currentAudioTrack.attach(audioElementRef.current)
+      console.log('[ViewerLiveScreen] 오디오 트랙 화면에 연결 완료:', {
+        trackSid: currentAudioTrack.sid,
+        roomName: room.name,
+        viewerName
+      })
+    }
+  }, [currentAudioTrack, room.name, viewerName])
+
   // 컴포넌트 언마운트 시 정리
   useEffect(() => {
     return () => {
-      console.log('[ViewerScreen] 컴포넌트 언마운트 - 리소스 정리 중...')
+      console.log('[ViewerLiveScreen] 컴포넌트 언마운트 - 리소스 정리 중...')
       
       // LiveKit 연결 정리
       if (roomRef.current) {
         roomRef.current.disconnect().catch(err => {
-          console.error('[ViewerScreen] LiveKit 연결 해제 실패:', err)
+          console.error('[ViewerLiveScreen] LiveKit 연결 해제 실패:', err)
         })
         roomRef.current = null
-        console.log('[ViewerScreen] LiveKit 연결 정리됨')
+        console.log('[ViewerLiveScreen] LiveKit 연결 정리됨')
       }
     }
   }, [])
 
   const joinRoom = async () => {
-    if (!viewerName.trim()) {
-      setError('시청자 이름을 입력해주세요.')
-      return
-    }
-
-    console.log('[ViewerScreen] 방 참여 시작:', { roomName: room.name, viewerName })
+    console.log('[ViewerLiveScreen] 방 참여 시작:', { roomName: room.name, viewerName })
 
     try {
       setIsConnecting(true)
       setError(null)
 
       // 1. 백엔드에서 시청자용 토큰 요청
-      console.log('[ViewerScreen] 백엔드 시청자 참여 요청...')
+      console.log('[ViewerLiveScreen] 백엔드 시청자 참여 요청...')
       const joinData = await backendClient.joinStream({
         identity: viewerName,
         room_name: room.name
       })
-      console.log('[ViewerScreen] 시청자 참여 성공:', joinData)
+      console.log('[ViewerLiveScreen] 시청자 참여 성공:', joinData)
       
       // 2. LiveKit 룸 생성 및 연결
       console.log('[LiveKit] 시청자 룸 생성 시작')
@@ -145,6 +160,8 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
             timestamp: new Date().toISOString()
           })
         } else if (track.kind === Track.Kind.Audio) {
+          setCurrentAudioTrack(track)
+          
           // 실제 오디오 스트림 수신 시작 로그
           console.log('[LiveKit] 오디오 스트림 수신 시작:', {
             trackSid: track.sid,
@@ -175,6 +192,7 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
             timestamp: new Date().toISOString()
           })
         } else if (track.kind === Track.Kind.Audio) {
+          setCurrentAudioTrack(null)
           console.log('[LiveKit] 오디오 스트림 수신 중단:', {
             trackSid: track.sid,
             participantIdentity: participant.identity,
@@ -198,8 +216,8 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
       console.log('[LiveKit] 시청자 룸 연결 완료:', { roomName: room.name, viewerName })
 
     } catch (err) {
-      console.error('[ViewerScreen] 방 참여 실패:', err)
-      console.error('[ViewerScreen] 에러 스택:', (err as Error).stack)
+      console.error('[ViewerLiveScreen] 방 참여 실패:', err)
+      console.error('[ViewerLiveScreen] 에러 스택:', (err as Error).stack)
       
       let errorMessage = '방 참여에 실패했습니다.'
       if (err instanceof Error) {
@@ -225,39 +243,27 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
       setIsConnecting(false)
       setParticipants([])
       setCurrentVideoTrack(null)
+      setCurrentAudioTrack(null)
     } catch (err) {
-      console.error('[ViewerScreen] 방 나가기 실패:', err)
+      console.error('[ViewerLiveScreen] 방 나가기 실패:', err)
       setError(err instanceof Error ? err.message : '방 나가기에 실패했습니다.')
     }
   }
 
-  // 컴포넌트 언마운트 시 정리
+  // 컴포넌트 마운트 시 방 참여
   useEffect(() => {
-    console.log('[ViewerScreen] 컴포넌트 마운트됨:', { roomName: room.name })
+    console.log('[ViewerLiveScreen] 컴포넌트 마운트됨:', { roomName: room.name, viewerName })
+    joinRoom()
     
     return () => {
-      console.log('[ViewerScreen] 컴포넌트 언마운트 - 리소스 정리 중...')
+      console.log('[ViewerLiveScreen] 컴포넌트 언마운트 - 리소스 정리 중...')
       if (roomRef.current) {
         console.log('[LiveKit] 시청자 컴포넌트 언마운트 시 룸 연결 해제:', { roomName: room.name, viewerName })
         roomRef.current.disconnect()
         console.log('[LiveKit] 시청자 룸 연결 해제 완료')
       }
     }
-  }, [room.name, viewerName])
-
-  const getBroadcasterInfo = () => {
-    if (!room.metadata) return null
-    
-    if (room.metadata.creator_identity) {
-      return `방송자: ${room.metadata.creator_identity}`
-    }
-    
-    if (room.metadata.title) {
-      return `제목: ${room.metadata.title}`
-    }
-    
-    return null
-  }
+  }, [])
 
   return (
     <div style={{ padding: '20px' }}>
@@ -277,54 +283,6 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
           뒤로가기
         </button>
       </div>
-
-      {/* 방 정보 */}
-      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '8px' }}>
-        <h3 style={{ marginBottom: '10px' }}>방 정보</h3>
-        <p><strong>방 이름:</strong> {room.name}</p>
-        {getBroadcasterInfo() && <p><strong>{getBroadcasterInfo()}</strong></p>}
-        <p><strong>참가자 수:</strong> {participants.length + 1}명</p>
-      </div>
-
-      {!isConnected && !isConnecting && (
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ marginBottom: '15px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
-              시청자 이름:
-            </label>
-            <input 
-              type="text"
-              value={viewerName}
-              onChange={(e) => setViewerName(e.target.value)}
-              placeholder="시청자 이름을 입력하세요"
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                fontSize: '14px'
-              }}
-            />
-          </div>
-
-          <button 
-            onClick={joinRoom}
-            disabled={isConnecting || !viewerName.trim()}
-            style={{
-              padding: '15px 30px',
-              fontSize: '16px',
-              backgroundColor: '#3498db',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isConnecting || !viewerName.trim() ? 'not-allowed' : 'pointer',
-              opacity: isConnecting || !viewerName.trim() ? 0.7 : 1
-            }}
-          >
-            {isConnecting ? '방 참여 중...' : '방 참여'}
-          </button>
-        </div>
-      )}
 
       {isConnecting && (
         <div style={{ textAlign: 'center', padding: '40px' }}>
@@ -360,10 +318,10 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
                 borderRadius: '8px',
                 display: currentVideoTrack ? 'block' : 'none'
               }}
-              onPlay={() => console.log('[ViewerScreen] 방송 비디오 재생 시작됨')}
-              onPause={() => console.log('[ViewerScreen] 방송 비디오 일시정지됨')}
-              onEnded={() => console.log('[ViewerScreen] 방송 비디오 종료됨')}
-              onError={(e) => console.error('[ViewerScreen] 방송 비디오 에러:', e)}
+              onPlay={() => console.log('[ViewerLiveScreen] 방송 비디오 재생 시작됨')}
+              onPause={() => console.log('[ViewerLiveScreen] 방송 비디오 일시정지됨')}
+              onEnded={() => console.log('[ViewerLiveScreen] 방송 비디오 종료됨')}
+              onError={(e) => console.error('[ViewerLiveScreen] 방송 비디오 에러:', e)}
             />
             {currentVideoTrack ? (
               <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
@@ -385,6 +343,42 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
                 <p>방송이 시작될 때까지 기다리는 중...</p>
               </div>
             )}
+          </div>
+
+          {/* 오디오 플레이어 (숨겨진 상태로 재생) */}
+          <audio 
+            ref={audioElementRef}
+            autoPlay
+            style={{ display: 'none' }}
+            onPlay={() => console.log('[ViewerLiveScreen] 방송 오디오 재생 시작됨')}
+            onPause={() => console.log('[ViewerLiveScreen] 방송 오디오 일시정지됨')}
+            onEnded={() => console.log('[ViewerLiveScreen] 방송 오디오 종료됨')}
+            onError={(e) => console.error('[ViewerLiveScreen] 방송 오디오 에러:', e)}
+          />
+          
+          {/* 스트림 상태 표시 */}
+          <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+            <h4 style={{ marginBottom: '10px', fontSize: '14px' }}>스트림 상태</h4>
+            <div style={{ display: 'flex', gap: '20px', fontSize: '12px' }}>
+              <div>
+                <strong>비디오:</strong> 
+                <span style={{ 
+                  color: currentVideoTrack ? '#28a745' : '#dc3545',
+                  marginLeft: '5px'
+                }}>
+                  {currentVideoTrack ? '수신 중' : '대기 중'}
+                </span>
+              </div>
+              <div>
+                <strong>오디오:</strong> 
+                <span style={{ 
+                  color: currentAudioTrack ? '#28a745' : '#dc3545',
+                  marginLeft: '5px'
+                }}>
+                  {currentAudioTrack ? '수신 중' : '대기 중'}
+                </span>
+              </div>
+            </div>
           </div>
 
           {/* 참가자 목록 */}
@@ -436,4 +430,4 @@ function ViewerScreen({ room, onBack }: ViewerScreenProps) {
   )
 }
 
-export default ViewerScreen 
+export default ViewerLiveScreen 

@@ -17,6 +17,11 @@ func main() {
 	// Echo 인스턴스 생성
 	e := echo.New()
 
+	e.HTTPErrorHandler = func(err error, c echo.Context) {
+		log.Println("[TESTDEBUG] err:", err)
+
+		e.DefaultHTTPErrorHandler(err, c)
+	}
 	// 미들웨어 설정
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())

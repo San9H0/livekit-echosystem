@@ -70,11 +70,11 @@ func TestLiveStreamAPIFlow(t *testing.T) {
 		ParticipantIdentity: "test-publisher (via OBS)",
 		Video: &livekit.IngressVideoOptions{
 			Source: livekit.TrackSource_CAMERA,
-			Preset: livekit.IngressVideoEncodingPreset_H264_1080P_30FPS_3_LAYERS,
+			// Preset: livekit.IngressVideoEncodingPreset_H264_1080P_30FPS_3_LAYERS,
 		},
 		Audio: &livekit.IngressAudioOptions{
 			Source: livekit.TrackSource_MICROPHONE,
-			Preset: livekit.IngressAudioEncodingPreset_OPUS_STEREO_96KBPS,
+			// Preset: livekit.IngressAudioEncodingPreset_OPUS_STEREO_96KBPS,
 		},
 	}
 

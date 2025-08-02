@@ -18,10 +18,10 @@ import (
 // CreateStream 요청/응답 구조체
 type CreateStreamRequest struct {
 	Metadata map[string]interface{} `json:"metadata"`
-	RoomName string                 `json:"room_name,omitempty"`
 }
 
 type CreateStreamResponse struct {
+	RoomId            string            `json:"room_id"`
 	AuthToken         string            `json:"auth_token"`
 	ConnectionDetails ConnectionDetails `json:"connection_details"`
 }
@@ -29,7 +29,7 @@ type CreateStreamResponse struct {
 // JoinStream 요청/응답 구조체
 type JoinStreamRequest struct {
 	Identity string `json:"identity"`
-	RoomName string `json:"room_name"`
+	RoomId   string `json:"room_id"`
 }
 
 type JoinStreamResponse struct {
@@ -49,7 +49,7 @@ type ListStreamsResponse struct {
 }
 
 type RoomInfo struct {
-	Name            string                 `json:"name"`
+	RoomId          string                 `json:"room_id"`
 	Metadata        map[string]interface{} `json:"metadata"`
 	NumParticipants uint32                 `json:"num_participants"`
 	CreationTime    int64                  `json:"creation_time"`
@@ -108,16 +108,13 @@ func (h *StreamHandler) CreateStream(c echo.Context) error {
 	}
 
 	// 룸 이름 생성 (없으면 자동 생성)
-	roomName := req.RoomName
-	if roomName == "" {
-		roomName = generateRoomId()
-	}
+	roomId := generateRoomId()
 
 	// 호스트용 LiveKit 토큰 생성
 	at := auth.NewAccessToken(h.apiKey, h.apiSecret)
 	at.SetIdentity(creatorIdentity)
 	at.SetVideoGrant(&auth.VideoGrant{
-		Room:         roomName,
+		Room:         roomId,
 		RoomJoin:     true,
 		CanPublish:   utils.GetBool(true), // 호스트는 발행 가능
 		CanSubscribe: utils.GetBool(true), // 구독 가능
@@ -132,7 +129,7 @@ func (h *StreamHandler) CreateStream(c echo.Context) error {
 	}
 
 	_, err = roomClient.CreateRoom(context.Background(), &livekit.CreateRoomRequest{
-		Name:     roomName,
+		Name:     roomId,
 		Metadata: string(metadataJSON),
 	})
 	if err != nil {
@@ -145,9 +142,10 @@ func (h *StreamHandler) CreateStream(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate LiveKit token")
 	}
 
-	authToken := h.createAuthToken(roomName, creatorIdentity)
+	authToken := h.createAuthToken(roomId, creatorIdentity)
 
 	response := CreateStreamResponse{
+		RoomId:    roomId,
 		AuthToken: authToken,
 		ConnectionDetails: ConnectionDetails{
 			WSURL: h.clientWSURL,
@@ -165,8 +163,8 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, "Invalid request body")
 	}
 
-	if req.Identity == "" || req.RoomName == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Identity and room_name are required")
+	if req.Identity == "" || req.RoomId == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Identity and room_id are required")
 	}
 
 	// RoomService 클라이언트 생성
@@ -175,7 +173,7 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 	// 동일한 identity를 가진 참가자가 이미 존재하는지 확인
 	exists := false
 	_, err := roomClient.GetParticipant(context.Background(), &livekit.RoomParticipantIdentity{
-		Room:     req.RoomName,
+		Room:     req.RoomId,
 		Identity: req.Identity,
 	})
 	if err == nil {
@@ -186,20 +184,20 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, "Participant already exists")
 	}
 
-	// 시청자용 LiveKit 토큰 생성
+	// 시청자용 LiveKit 토큰 생성 (미디어 파일 재생을 위해 발행 권한 포함)
 	at := auth.NewAccessToken(h.apiKey, h.apiSecret)
 	at.SetIdentity(req.Identity)
 	at.AddGrant(&auth.VideoGrant{
-		Room:           req.RoomName,
+		Room:           req.RoomId,
 		RoomJoin:       true,
-		CanPublish:     &[]bool{false}[0], // 시청자는 발행 불가
-		CanSubscribe:   &[]bool{true}[0],  // 구독 가능
-		CanPublishData: &[]bool{true}[0],  // 채팅/반응 가능
+		CanPublish:     &[]bool{true}[0], // 미디어 파일 재생을 위해 발행 권한 필요
+		CanSubscribe:   &[]bool{true}[0], // 구독 가능
+		CanPublishData: &[]bool{true}[0], // 채팅/반응 가능
 	})
 	at.SetValidFor(time.Hour)
 
 	// 인증 토큰 생성 (API 호출용)
-	authToken := h.createAuthToken(req.RoomName, req.Identity)
+	authToken := h.createAuthToken(req.RoomId, req.Identity)
 
 	// 응답 생성
 	livekitToken, err := at.ToJWT()
@@ -225,7 +223,7 @@ func (h *StreamHandler) createAuthToken(room, identity string) string {
 		RoomJoin: true,
 		Room:     room,
 	}
-	at.AddGrant(grant).
+	at.SetVideoGrant(grant).
 		SetIdentity(identity).
 		SetValidFor(time.Hour)
 
@@ -252,7 +250,7 @@ func (h *StreamHandler) ListStreams(c echo.Context) error {
 		}
 
 		roomInfo := RoomInfo{
-			Name:            room.Name,
+			RoomId:          room.Name,
 			Metadata:        metadata,
 			NumParticipants: room.NumParticipants,
 			CreationTime:    room.CreationTime,
@@ -260,6 +258,7 @@ func (h *StreamHandler) ListStreams(c echo.Context) error {
 			MaxParticipants: room.MaxParticipants,
 		}
 		roomList = append(roomList, roomInfo)
+		fmt.Printf("[TESTDEBUG] ListStreams room name:[%s]\n", roomInfo.RoomId)
 	}
 
 	response := ListStreamsResponse{
@@ -267,21 +266,23 @@ func (h *StreamHandler) ListStreams(c echo.Context) error {
 		Total: len(roomList),
 	}
 
+	fmt.Println("[TESTDEBUG] ListStreams roomList:", len(roomList))
+
 	return c.JSON(http.StatusOK, response)
 }
 
 // GetStream 핸들러 - 특정 스트림(룸) 조회
 func (h *StreamHandler) GetStream(c echo.Context) error {
-	roomName := c.Param("roomName")
-	if roomName == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Room name is required")
+	roomId := c.Param("roomId")
+	if roomId == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Room id is required")
 	}
 
 	roomClient := lksdk.NewRoomServiceClient(h.hostURL, h.apiKey, h.apiSecret)
 
 	// 룸 정보 조회
 	rooms, err := roomClient.ListRooms(context.Background(), &livekit.ListRoomsRequest{
-		Names: []string{roomName},
+		Names: []string{roomId},
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get room")
@@ -298,7 +299,7 @@ func (h *StreamHandler) GetStream(c echo.Context) error {
 	}
 
 	roomInfo := RoomInfo{
-		Name:            room.Name,
+		RoomId:          room.Name,
 		Metadata:        metadata,
 		NumParticipants: room.NumParticipants,
 		CreationTime:    room.CreationTime,
@@ -308,10 +309,10 @@ func (h *StreamHandler) GetStream(c echo.Context) error {
 
 	// 참가자 정보 조회
 	participants, err := roomClient.ListParticipants(context.Background(), &livekit.ListParticipantsRequest{
-		Room: roomName,
+		Room: roomId,
 	})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get participants")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to get participants").SetInternal(err)
 	}
 
 	var participantList []ParticipantInfo
@@ -336,23 +337,24 @@ func (h *StreamHandler) GetStream(c echo.Context) error {
 
 // DeleteStream 핸들러 - 스트림(룸) 삭제
 func (h *StreamHandler) DeleteStream(c echo.Context) error {
-	roomName := c.Param("roomName")
-	if roomName == "" {
-		return echo.NewHTTPError(http.StatusBadRequest, "Room name is required")
+	roomId := c.Param("room_id")
+	if roomId == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Room id is required")
 	}
 
 	roomClient := lksdk.NewRoomServiceClient(h.hostURL, h.apiKey, h.apiSecret)
 
+	fmt.Printf("[TESTDEBUG] DeleteStream room name:[%s]\n", roomId)
 	// 룸 삭제
 	_, err := roomClient.DeleteRoom(context.Background(), &livekit.DeleteRoomRequest{
-		Room: roomName,
+		Room: roomId,
 	})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete room")
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to delete room").SetInternal(err)
 	}
 
 	return c.JSON(http.StatusOK, map[string]string{
-		"message":   "Stream deleted successfully",
-		"room_name": roomName,
+		"message": "Stream deleted successfully",
+		"room_id": roomId,
 	})
 }
