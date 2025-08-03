@@ -23,15 +23,15 @@ function ViewerForm({ room, onSubmit, onBack, isSubmitting = false }: ViewerForm
 
   const getBroadcasterInfo = () => {
     if (!room.metadata) return null
-    
+
     if (room.metadata.creator_identity) {
       return `방송자: ${room.metadata.creator_identity}`
     }
-    
+
     if (room.metadata.title) {
       return `제목: ${room.metadata.title}`
     }
-    
+
     return null
   }
 
@@ -40,7 +40,7 @@ function ViewerForm({ room, onSubmit, onBack, isSubmitting = false }: ViewerForm
       {/* 방 정보 */}
       <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f8f9fa', border: '1px solid #dee2e6', borderRadius: '8px' }}>
         <h3 style={{ marginBottom: '10px' }}>방 정보</h3>
-        <p><strong>방 이름:</strong> {room.name}</p>
+        <p><strong>방 이름:</strong> {room.room_id}</p>
         {getBroadcasterInfo() && <p><strong>{getBroadcasterInfo()}</strong></p>}
       </div>
 
@@ -49,8 +49,8 @@ function ViewerForm({ room, onSubmit, onBack, isSubmitting = false }: ViewerForm
           <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>
             시청자 이름:
           </label>
-          <input 
-            {...register('viewerName', { 
+          <input
+            {...register('viewerName', {
               required: '시청자 이름을 입력해주세요.',
               minLength: { value: 2, message: '시청자 이름은 2자 이상이어야 합니다.' }
             })}
@@ -71,7 +71,7 @@ function ViewerForm({ room, onSubmit, onBack, isSubmitting = false }: ViewerForm
         </div>
 
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button 
+          <button
             type="button"
             onClick={onBack}
             style={{
@@ -86,8 +86,8 @@ function ViewerForm({ room, onSubmit, onBack, isSubmitting = false }: ViewerForm
           >
             뒤로가기
           </button>
-          
-          <button 
+
+          <button
             type="submit"
             disabled={isSubmitting || !isValid}
             style={{

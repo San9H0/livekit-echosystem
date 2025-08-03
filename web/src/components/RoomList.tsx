@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import type { Room } from '../clients/backendClient'
 import RoomCard from './RoomCard'
+import { Button } from '@/components/ui/button'
+import { RefreshCw } from 'lucide-react'
 
 interface RoomListProps {
   rooms: Room[]
@@ -16,7 +18,7 @@ function RoomList({ rooms, loading, error, onRefresh, onJoinRoom, onDeleteRoom }
 
   // 새로 생성된 방을 추적
   useEffect(() => {
-    const currentRoomNames = new Set(rooms.map(room => room.name))
+    const currentRoomNames = new Set(rooms.map(room => room.room_id))
     const previousRoomNames = new Set(Array.from(newRooms))
 
     // 새로 추가된 방들을 찾아서 표시
@@ -38,89 +40,56 @@ function RoomList({ rooms, loading, error, onRefresh, onJoinRoom, onDeleteRoom }
 
   if (loading) {
     return (
-      <div className="loading">
-        <p>방 목록을 불러오는 중...</p>
+      <div className="flex flex-col items-center justify-center py-12">
+        <div className="loading-spinner mb-4"></div>
+        <p className="text-lg text-gray-600">방 목록을 불러오는 중...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="error">
-        <p>오류가 발생했습니다: {error}</p>
-        <button
-          onClick={onRefresh}
-          style={{
-            marginTop: '10px',
-            padding: '10px 20px',
-            background: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="text-red-500 text-lg mb-4">오류가 발생했습니다: {error}</div>
+        <Button onClick={onRefresh} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
           다시 시도
-        </button>
+        </Button>
       </div>
     )
   }
 
   if (rooms.length === 0) {
     return (
-      <div className="empty-state">
-        <h3>현재 활성화된 방이 없습니다</h3>
-        <p>새로운 방이 생성되면 여기에 표시됩니다.</p>
-        <button
-          onClick={onRefresh}
-          style={{
-            marginTop: '20px',
-            padding: '10px 20px',
-            background: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <h3 className="text-xl font-semibold text-gray-700 mb-2">현재 활성화된 방이 없습니다</h3>
+        <p className="text-gray-500 mb-6">새로운 방이 생성되면 여기에 표시됩니다.</p>
+        <Button onClick={onRefresh} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
           새로고침
-        </button>
+        </Button>
       </div>
     )
   }
 
   return (
     <div>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px'
-      }}>
-        <h2>활성화된 방 목록 ({rooms.length}개)</h2>
-        <button
-          onClick={onRefresh}
-          style={{
-            padding: '8px 16px',
-            background: '#3498db',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
-        >
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-semibold text-gray-900">활성화된 방 목록 ({rooms.length}개)</h2>
+        <Button onClick={onRefresh} variant="outline" className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
           새로고침
-        </button>
+        </Button>
       </div>
 
-      <div className="room-list">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {rooms.map((room) => (
           <RoomCard
-            key={room.name}
+            key={room.room_id}
             room={room}
             onJoinRoom={onJoinRoom}
             onDeleteRoom={onDeleteRoom}
-            isNewRoom={newRooms.has(room.name)}
+            isNewRoom={newRooms.has(room.room_id)}
           />
         ))}
       </div>

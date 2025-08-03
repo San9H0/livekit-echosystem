@@ -33,8 +33,23 @@ const LobbyPage = ({
         try {
             setLoading(true)
             setError(null)
+            console.log('[LobbyPage] 방 목록 및 참가자 정보 조회 시작')
+
             const rooms = await backendClient.getRooms()
+
+            // 각 방의 참가자 정보 로깅
+            rooms.forEach(room => {
+                console.log(`[LobbyPage] 방 "${room.metadata?.title || room.room_id}" 정보:`, {
+                    roomId: room.room_id,
+                    title: room.metadata?.title || '(제목 없음)',
+                    numParticipants: room.num_participants,
+                    participants: room.participants || [],
+                    creationTime: new Date(room.creation_time * 1000).toLocaleString()
+                })
+            })
+
             setRooms(rooms)
+            console.log('[LobbyPage] 방 목록 및 참가자 정보 조회 완료:', rooms.length, '개 방')
         } catch (err) {
             console.error('Failed to fetch rooms:', err)
             setError(err instanceof Error ? err.message : 'Failed to fetch rooms')
@@ -45,6 +60,17 @@ const LobbyPage = ({
 
     useEffect(() => {
         fetchRooms()
+
+        // 30초마다 자동 새로고침
+        const intervalId = setInterval(() => {
+            console.log('[LobbyPage] 자동 새로고침 실행')
+            fetchRooms()
+        }, 30000) // 30초
+
+        // 컴포넌트 언마운트 시 인터벌 정리
+        return () => {
+            clearInterval(intervalId)
+        }
     }, [])
 
     const handleJoinRoom = (room: Room) => {
@@ -103,43 +129,23 @@ const LobbyPage = ({
     }, 0)
 
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            height: '100vh',
-            backgroundColor: '#f8fafc'
-        }}>
+        <div className="flex flex-col h-screen bg-gray-50">
             {/* 헤더 네비게이션 */}
             <HeaderNavigation
                 onCreateRoom={() => setIsCreateModalOpen(true)}
                 onNavigateToPublisher={onNavigateToPublisher}
+                onRefresh={fetchRooms}
             />
 
             {/* 메인 콘텐츠 영역 */}
-            <div style={{
-                display: 'flex',
-                flex: 1,
-                overflow: 'hidden'
-            }}>
+            <div className="flex flex-1 overflow-hidden">
                 {/* 왼쪽 사이드바 */}
-                <SidebarNavigation
-                    activeRooms={rooms.length}
-                    totalParticipants={totalParticipants}
-                    onRefresh={fetchRooms}
-                />
+                <SidebarNavigation />
 
                 {/* 메인 콘텐츠 */}
-                <main style={{
-                    flex: 1,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    overflow: 'hidden'
-                }}>
+                <main className="flex-1 flex flex-col overflow-hidden">
                     {/* 방 목록 */}
-                    <div style={{
-                        flex: 1,
-                        overflow: 'hidden'
-                    }}>
+                    <div className="flex-1 overflow-hidden">
                         <RoomList
                             rooms={rooms}
                             loading={loading}

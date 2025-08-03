@@ -55,6 +55,7 @@ type RoomInfo struct {
 	CreationTime    int64                  `json:"creation_time"`
 	EmptyTimeout    uint32                 `json:"empty_timeout"`
 	MaxParticipants uint32                 `json:"max_participants"`
+	Participants    []ParticipantInfo      `json:"participants,omitempty"`
 }
 
 // GetStream 응답 구조체
@@ -129,8 +130,10 @@ func (h *StreamHandler) CreateStream(c echo.Context) error {
 	}
 
 	_, err = roomClient.CreateRoom(context.Background(), &livekit.CreateRoomRequest{
-		Name:     roomId,
-		Metadata: string(metadataJSON),
+		Name:             roomId,
+		Metadata:         string(metadataJSON),
+		EmptyTimeout:     300,
+		DepartureTimeout: 300,
 	})
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to create room")
@@ -142,11 +145,9 @@ func (h *StreamHandler) CreateStream(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to generate LiveKit token")
 	}
 
-	authToken := h.createAuthToken(roomId, creatorIdentity)
-
 	response := CreateStreamResponse{
 		RoomId:    roomId,
-		AuthToken: authToken,
+		AuthToken: livekitToken, // 하나의 토큰만 사용
 		ConnectionDetails: ConnectionDetails{
 			WSURL: h.clientWSURL,
 			Token: livekitToken,
@@ -184,10 +185,11 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusConflict, "Participant already exists")
 	}
 
+	fmt.Println("[TESTDEBUG] Create JoinStream Token")
 	// 시청자용 LiveKit 토큰 생성 (미디어 파일 재생을 위해 발행 권한 포함)
 	at := auth.NewAccessToken(h.apiKey, h.apiSecret)
 	at.SetIdentity(req.Identity)
-	at.AddGrant(&auth.VideoGrant{
+	at.SetVideoGrant(&auth.VideoGrant{
 		Room:           req.RoomId,
 		RoomJoin:       true,
 		CanPublish:     &[]bool{true}[0], // 미디어 파일 재생을 위해 발행 권한 필요
@@ -195,9 +197,7 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 		CanPublishData: &[]bool{true}[0], // 채팅/반응 가능
 	})
 	at.SetValidFor(time.Hour)
-
-	// 인증 토큰 생성 (API 호출용)
-	authToken := h.createAuthToken(req.RoomId, req.Identity)
+	at.SetName(req.Identity) // 참가자 이름으로 임시 사용
 
 	// 응답 생성
 	livekitToken, err := at.ToJWT()
@@ -206,7 +206,7 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 	}
 
 	response := JoinStreamResponse{
-		AuthToken: authToken,
+		AuthToken: livekitToken,
 		ConnectionDetails: ConnectionDetails{
 			WSURL: h.clientWSURL,
 			Token: livekitToken,
@@ -214,21 +214,6 @@ func (h *StreamHandler) JoinStream(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
-}
-
-// createAuthToken 헬퍼 함수 (API 호출용 토큰)
-func (h *StreamHandler) createAuthToken(room, identity string) string {
-	at := auth.NewAccessToken(h.apiKey, h.apiSecret)
-	grant := &auth.VideoGrant{
-		RoomJoin: true,
-		Room:     room,
-	}
-	at.SetVideoGrant(grant).
-		SetIdentity(identity).
-		SetValidFor(time.Hour)
-
-	token, _ := at.ToJWT()
-	return token
 }
 
 // ListStreams 핸들러 - 모든 스트림(룸) 조회
@@ -249,6 +234,26 @@ func (h *StreamHandler) ListStreams(c echo.Context) error {
 			json.Unmarshal([]byte(room.Metadata), &metadata)
 		}
 
+		// 각 방의 참가자 정보 조회
+		var participants []ParticipantInfo
+		if room.NumParticipants > 0 {
+			participantsResp, err := roomClient.ListParticipants(context.Background(), &livekit.ListParticipantsRequest{
+				Room: room.Name,
+			})
+			if err == nil {
+				for _, participant := range participantsResp.Participants {
+					participantInfo := ParticipantInfo{
+						Identity:    participant.Identity,
+						Name:        participant.Name,
+						State:       participant.State.String(),
+						JoinedAt:    participant.JoinedAt,
+						IsPublisher: len(participant.Tracks) > 0,
+					}
+					participants = append(participants, participantInfo)
+				}
+			}
+		}
+
 		roomInfo := RoomInfo{
 			RoomId:          room.Name,
 			Metadata:        metadata,
@@ -256,9 +261,10 @@ func (h *StreamHandler) ListStreams(c echo.Context) error {
 			CreationTime:    room.CreationTime,
 			EmptyTimeout:    room.EmptyTimeout,
 			MaxParticipants: room.MaxParticipants,
+			Participants:    participants,
 		}
 		roomList = append(roomList, roomInfo)
-		fmt.Printf("[TESTDEBUG] ListStreams room name:[%s]\n", roomInfo.RoomId)
+		fmt.Printf("[TESTDEBUG] ListStreams room name:[%s], participants:[%d]\n", roomInfo.RoomId, len(participants))
 	}
 
 	response := ListStreamsResponse{

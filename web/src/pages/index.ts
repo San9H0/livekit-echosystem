@@ -1,6 +1,0 @@
-export { default as LobbyPage } from './LobbyPage'
-export { default as PublisherPage } from './PublisherPage'
-export { default as SubscriberPage } from './SubscriberPage'
-export { default as CreateRoomPage } from './CreateRoomPage'
-export { default as JoinRoomPage } from './JoinRoomPage'
-export { default as ConferenceCallPage } from './ConferenceCallPage' 

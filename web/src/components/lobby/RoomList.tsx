@@ -1,6 +1,11 @@
 import React, { useState, useMemo } from 'react'
 import { type Room } from '../../clients/backendClient'
 import RoomCard from './RoomCard'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent } from '@/components/ui/card'
+import { Search, RefreshCw } from 'lucide-react'
 
 interface RoomListProps {
     rooms: Room[]
@@ -51,237 +56,100 @@ const RoomList = ({
 
     if (loading) {
         return (
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '60px 20px',
-                minHeight: '400px'
-            }}>
-                <div style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '4px solid #f3f4f6',
-                    borderTop: '4px solid #3b82f6',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                }} />
-                <p style={{
-                    margin: '20px 0 0 0',
-                    fontSize: '16px',
-                    color: '#6b7280'
-                }}>
+            <div className="flex flex-col items-center justify-center py-16 min-h-[400px]">
+                <div className="loading-spinner mb-5"></div>
+                <p className="text-lg text-gray-600">
                     방 목록을 불러오는 중...
                 </p>
-                <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
             </div>
         )
     }
 
     if (error) {
         return (
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '60px 20px',
-                minHeight: '400px',
-                textAlign: 'center'
-            }}>
-                <div style={{
-                    fontSize: '48px',
-                    marginBottom: '16px'
-                }}>
+            <div className="flex flex-col items-center justify-center py-16 min-h-[400px] text-center">
+                <div className="text-5xl mb-4">
                     😞
                 </div>
-                <h3 style={{
-                    margin: '0 0 12px 0',
-                    fontSize: '18px',
-                    color: '#1f2937'
-                }}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
                     방 목록을 불러올 수 없습니다
                 </h3>
-                <p style={{
-                    margin: '0 0 24px 0',
-                    fontSize: '14px',
-                    color: '#6b7280',
-                    maxWidth: '400px'
-                }}>
+                <p className="text-sm text-gray-600 mb-6 max-w-md">
                     {error}
                 </p>
-                <button
-                    onClick={onRefresh}
-                    style={{
-                        padding: '12px 24px',
-                        backgroundColor: '#3b82f6',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontWeight: '500'
-                    }}
-                >
+                <Button onClick={onRefresh} className="flex items-center gap-2">
+                    <RefreshCw className="h-4 w-4" />
                     다시 시도
-                </button>
+                </Button>
             </div>
         )
     }
 
     return (
-        <div style={{
-            padding: '24px',
-            height: '100%',
-            overflowY: 'auto'
-        }}>
+        <div className="p-6 h-full overflow-y-auto">
             {/* 검색 및 정렬 컨트롤 */}
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '24px',
-                gap: '16px'
-            }}>
-                <div style={{
-                    flex: 1,
-                    maxWidth: '400px',
-                    position: 'relative'
-                }}>
-                    <input
+            <div className="flex justify-between items-center mb-6 gap-4">
+                <div className="flex-1 max-w-md relative">
+                    <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
                         type="text"
                         placeholder="방 이름으로 검색..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '12px 16px 12px 44px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '8px',
-                            fontSize: '14px',
-                            outline: 'none',
-                            transition: 'border-color 0.2s ease'
-                        }}
-                        onFocus={(e) => {
-                            e.target.style.borderColor = '#3b82f6'
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#d1d5db'
-                        }}
+                        className="pl-10"
                     />
-                    <span style={{
-                        position: 'absolute',
-                        left: '16px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        fontSize: '16px',
-                        color: '#9ca3af'
-                    }}>
-                        🔍
-                    </span>
                 </div>
 
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                }}>
-                    <span style={{
-                        fontSize: '14px',
-                        color: '#6b7280'
-                    }}>
+                <div className="flex items-center gap-3">
+                    <span className="text-sm text-gray-600">
                         정렬:
                     </span>
-                    <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as 'name' | 'participants' | 'created')}
-                        style={{
-                            padding: '8px 12px',
-                            border: '1px solid #d1d5db',
-                            borderRadius: '6px',
-                            fontSize: '14px',
-                            backgroundColor: 'white',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="name">이름순</option>
-                        <option value="participants">참가자순</option>
-                        <option value="created">최신순</option>
-                    </select>
+                    <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+                        <SelectTrigger className="w-32">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="name">이름순</SelectItem>
+                            <SelectItem value="participants">참가자순</SelectItem>
+                            <SelectItem value="created">최신순</SelectItem>
+                        </SelectContent>
+                    </Select>
                 </div>
             </div>
 
             {/* 결과 카운트 */}
-            <div style={{
-                marginBottom: '20px',
-                padding: '12px 16px',
-                backgroundColor: '#f8fafc',
-                borderRadius: '8px',
-                border: '1px solid #e1e5e9'
-            }}>
-                <span style={{
-                    fontSize: '14px',
-                    color: '#6b7280'
-                }}>
-                    총 <strong style={{ color: '#1f2937' }}>{filteredAndSortedRooms.length}</strong>개의 방이 있습니다
-                    {searchTerm && (
-                        <span> (검색어: "{searchTerm}")</span>
-                    )}
-                </span>
-            </div>
+            <Card className="mb-5">
+                <CardContent className="p-4">
+                    <span className="text-sm text-gray-600">
+                        총 <strong className="text-gray-900">{filteredAndSortedRooms.length}</strong>개의 방이 있습니다
+                        {searchTerm && (
+                            <span> (검색어: "{searchTerm}")</span>
+                        )}
+                    </span>
+                </CardContent>
+            </Card>
 
             {/* 방 목록 그리드 */}
             {filteredAndSortedRooms.length === 0 ? (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '60px 20px',
-                    textAlign: 'center'
-                }}>
-                    <div style={{
-                        fontSize: '48px',
-                        marginBottom: '16px'
-                    }}>
-                        🏠
-                    </div>
-                    <h3 style={{
-                        margin: '0 0 12px 0',
-                        fontSize: '18px',
-                        color: '#1f2937'
-                    }}>
-                        {searchTerm ? '검색 결과가 없습니다' : '아직 방이 없습니다'}
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                        {searchTerm ? '검색 결과가 없습니다' : '방이 없습니다'}
                     </h3>
-                    <p style={{
-                        margin: 0,
-                        fontSize: '14px',
-                        color: '#6b7280'
-                    }}>
-                        {searchTerm ? '다른 검색어를 시도해보세요.' : '첫 번째 방을 만들어보세요!'}
+                    <p className="text-sm text-gray-600">
+                        {searchTerm ? '다른 검색어를 시도해보세요.' : '새로운 방을 생성해보세요.'}
                     </p>
                 </div>
             ) : (
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                    gap: '24px',
-                    paddingBottom: '24px'
-                }}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pb-6">
                     {filteredAndSortedRooms.map((room, index) => (
-                        <RoomCard
-                            key={room.metadata?.title || room.room_id}
-                            room={room}
-                            onJoinRoom={onJoinRoom}
-                            onDeleteRoom={onDeleteRoom}
-                            isNewRoom={index < 3} // 최근 3개 방을 NEW로 표시
-                        />
+                        <div key={room.metadata?.title || room.room_id} className="w-full">
+                            <RoomCard
+                                room={room}
+                                onJoinRoom={onJoinRoom}
+                                onDeleteRoom={onDeleteRoom}
+                                isNewRoom={index < 3} // 최근 3개 방을 NEW로 표시
+                            />
+                        </div>
                     ))}
                 </div>
             )}

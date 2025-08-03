@@ -4,156 +4,39 @@ const Footer = () => {
     const currentYear = new Date().getFullYear()
 
     return (
-        <footer style={{
-            backgroundColor: '#1f2937',
-            color: '#f9fafb',
-            padding: '24px',
-            textAlign: 'center',
-            borderTop: '1px solid #374151'
-        }}>
-            <div style={{
-                maxWidth: '1200px',
-                margin: '0 auto',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px'
-            }}>
-                {/* 로고 및 브랜드 */}
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px'
-                }}>
-                    <div style={{
-                        width: '32px',
-                        height: '32px',
-                        backgroundColor: '#3b82f6',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontSize: '16px',
-                        fontWeight: 'bold'
-                    }}>
-                        🎥
+        <footer className="bg-gray-800 text-gray-100 py-3 text-center border-t border-gray-700">
+            <div className="max-w-6xl mx-auto flex items-center justify-between px-6">
+                {/* 왼쪽: 로고 및 저작권 */}
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-500 rounded-md flex items-center justify-center text-white text-sm font-bold">
+                            🎥
+                        </div>
+                        <span className="text-sm font-semibold">
+                            LiveKit Conference
+                        </span>
                     </div>
-                    <span style={{
-                        fontSize: '18px',
-                        fontWeight: '600'
-                    }}>
-                        LiveKit Conference
+                    <span className="text-xs text-gray-400">
+                        © {currentYear} All rights reserved.
                     </span>
                 </div>
 
-                {/* 저작권 정보 */}
-                <div style={{
-                    fontSize: '14px',
-                    color: '#d1d5db',
-                    lineHeight: '1.5'
-                }}>
-                    <p style={{ margin: '0 0 8px 0' }}>
-                        © {currentYear} LiveKit Conference. All rights reserved.
-                    </p>
-                    <p style={{ margin: 0 }}>
-                        Made with ❤️ by <strong style={{ color: '#3b82f6' }}>LiveKit Team</strong>
-                    </p>
-                </div>
-
-                {/* 링크들 */}
-                <div style={{
-                    display: 'flex',
-                    gap: '24px',
-                    marginTop: '8px'
-                }}>
-                    <a
-                        href="#"
-                        style={{
-                            color: '#9ca3af',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#3b82f6'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#9ca3af'
-                        }}
-                    >
+                {/* 중앙: 링크들 */}
+                <div className="flex gap-4">
+                    <a href="#" className="text-gray-400 text-xs no-underline transition-colors hover:text-blue-400">
                         개인정보처리방침
                     </a>
-                    <a
-                        href="#"
-                        style={{
-                            color: '#9ca3af',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#3b82f6'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#9ca3af'
-                        }}
-                    >
+                    <a href="#" className="text-gray-400 text-xs no-underline transition-colors hover:text-blue-400">
                         이용약관
                     </a>
-                    <a
-                        href="#"
-                        style={{
-                            color: '#9ca3af',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#3b82f6'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#9ca3af'
-                        }}
-                    >
+                    <a href="#" className="text-gray-400 text-xs no-underline transition-colors hover:text-blue-400">
                         고객지원
-                    </a>
-                    <a
-                        href="#"
-                        style={{
-                            color: '#9ca3af',
-                            textDecoration: 'none',
-                            fontSize: '13px',
-                            transition: 'color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#3b82f6'
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#9ca3af'
-                        }}
-                    >
-                        개발자 문서
                     </a>
                 </div>
 
-                {/* 기술 스택 정보 */}
-                <div style={{
-                    marginTop: '16px',
-                    padding: '12px 20px',
-                    backgroundColor: '#374151',
-                    borderRadius: '8px',
-                    fontSize: '12px',
-                    color: '#9ca3af'
-                }}>
-                    <span>Powered by </span>
-                    <strong style={{ color: '#3b82f6' }}>LiveKit</strong>
-                    <span>, </span>
-                    <strong style={{ color: '#3b82f6' }}>React</strong>
-                    <span>, </span>
-                    <strong style={{ color: '#3b82f6' }}>TypeScript</strong>
-                    <span> & </span>
-                    <strong style={{ color: '#3b82f6' }}>WebRTC</strong>
+                {/* 오른쪽: 기술 스택 */}
+                <div className="text-xs text-gray-400">
+                    Powered by <strong className="text-blue-400">LiveKit</strong>
                 </div>
             </div>
         </footer>

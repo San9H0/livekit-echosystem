@@ -1,6 +1,15 @@
 // 백엔드 API 클라이언트
 const API_BASE_URL = 'http://localhost:8080/api'
 
+// 참가자 타입 정의
+export interface Participant {
+  identity: string
+  name: string
+  state: string
+  joined_at: number
+  is_publisher: boolean
+}
+
 // Room 타입 정의
 export interface Room {
   room_id: string
@@ -9,6 +18,7 @@ export interface Room {
   creation_time: number
   empty_timeout: number
   max_participants: number
+  participants?: Participant[]
 }
 
 // 스트림 생성 요청 타입

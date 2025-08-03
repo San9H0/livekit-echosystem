@@ -1,4 +1,7 @@
 import type { Room } from '../clients/backendClient'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 
 interface RoomCardProps {
   room: Room
@@ -14,7 +17,7 @@ function RoomCard({ room, onJoinRoom, onDeleteRoom, isNewRoom = false }: RoomCar
 
   const handleJoinRoom = () => {
     console.log('[LiveKit] 방 입장 시도:', {
-      roomName: room.name,
+      roomName: room.room_id,
       participantCount: room.num_participants,
       maxParticipants: room.max_participants,
       metadata: room.metadata
@@ -25,7 +28,7 @@ function RoomCard({ room, onJoinRoom, onDeleteRoom, isNewRoom = false }: RoomCar
   const handleDeleteRoom = (e: React.MouseEvent) => {
     e.stopPropagation() // 카드 클릭 이벤트 전파 방지
     if (onDeleteRoom) {
-      console.log('[RoomCard] 방 삭제 시도:', { roomName: room.name })
+      console.log('[RoomCard] 방 삭제 시도:', { roomName: room.room_id })
       onDeleteRoom(room)
     }
   }
@@ -57,116 +60,60 @@ function RoomCard({ room, onJoinRoom, onDeleteRoom, isNewRoom = false }: RoomCar
     return '방송'
   }
 
-  const getCardStyle = () => {
-    const baseStyle = {
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      padding: '15px',
-      marginBottom: '10px',
-      cursor: 'pointer',
-      transition: 'all 0.3s ease',
-      backgroundColor: '#fff'
-    }
-
-    if (isNewRoom) {
-      return {
-        ...baseStyle,
-        border: '2px solid #27ae60',
-        backgroundColor: '#f8fff9',
-        boxShadow: '0 4px 8px rgba(39, 174, 96, 0.2)'
-      }
-    }
-
-    return baseStyle
-  }
-
   return (
-    <div
-      className="room-card"
+    <Card
+      className={`cursor-pointer transition-all duration-300 hover:shadow-lg hover:-translate-y-1 ${isNewRoom
+        ? 'border-green-500 bg-green-50 hover:shadow-green-200'
+        : 'hover:shadow-gray-200'
+        }`}
       onClick={handleJoinRoom}
-      style={getCardStyle()}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = isNewRoom
-          ? '0 6px 12px rgba(39, 174, 96, 0.3)'
-          : '0 4px 8px rgba(0, 0, 0, 0.1)'
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = isNewRoom
-          ? '0 4px 8px rgba(39, 174, 96, 0.2)'
-          : '0 2px 4px rgba(0, 0, 0, 0.1)'
-      }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-        <h3 style={{ margin: 0, color: isNewRoom ? '#27ae60' : '#333' }}>
-          {room.name}
-        </h3>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {isNewRoom && (
-            <span style={{
-              backgroundColor: '#27ae60',
-              color: 'white',
-              padding: '2px 8px',
-              borderRadius: '12px',
-              fontSize: '10px',
-              fontWeight: 'bold'
-            }}>
-              NEW
-            </span>
-          )}
-          <span style={{
-            backgroundColor: getRoomType() === 'Conference Call' ? '#3498db' : '#e74c3c',
-            color: 'white',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            fontSize: '10px',
-            fontWeight: 'bold'
-          }}>
-            {getRoomType()}
-          </span>
-          {onDeleteRoom && (
-            <button
-              onClick={handleDeleteRoom}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                borderRadius: '4px',
-                color: '#e74c3c',
-                fontSize: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#fdf2f2'
-                e.currentTarget.style.transform = 'scale(1.1)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.transform = 'scale(1)'
-              }}
-              title="방 삭제"
+      <CardHeader className="pb-3">
+        <div className="flex justify-between items-center">
+          <CardTitle className={`text-lg ${isNewRoom ? 'text-green-600' : 'text-gray-900'}`}>
+            {room.room_id}
+          </CardTitle>
+          <div className="flex gap-2 items-center">
+            {isNewRoom && (
+              <Badge variant="secondary" className="bg-green-500 text-white text-xs">
+                NEW
+              </Badge>
+            )}
+            <Badge
+              variant="secondary"
+              className={`text-xs ${getRoomType() === 'Conference Call'
+                ? 'bg-blue-500 text-white'
+                : 'bg-red-500 text-white'
+                }`}
             >
-              🗑️
-            </button>
+              {getRoomType()}
+            </Badge>
+            {onDeleteRoom && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDeleteRoom}
+                className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-600 hover:scale-110 transition-all"
+                title="방 삭제"
+              >
+                🗑️
+              </Button>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-2 text-sm text-gray-600">
+          <p><strong>참가자:</strong> {room.num_participants}명</p>
+          <p><strong>최대 참가자:</strong> {room.max_participants}명</p>
+          <p><strong>생성 시간:</strong> {formatDate(room.creation_time)}</p>
+          <p><strong>빈 방 대기시간:</strong> {room.empty_timeout}초</p>
+          {room.metadata && (
+            <p><strong>{getMetadataDisplay()}</strong></p>
           )}
         </div>
-      </div>
-
-      <div className="room-info">
-        <p><strong>참가자:</strong> {room.num_participants}명</p>
-        <p><strong>최대 참가자:</strong> {room.max_participants}명</p>
-        <p><strong>생성 시간:</strong> {formatDate(room.creation_time)}</p>
-        <p><strong>빈 방 대기시간:</strong> {room.empty_timeout}초</p>
-        {room.metadata && (
-          <p><strong>{getMetadataDisplay()}</strong></p>
-        )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
 
