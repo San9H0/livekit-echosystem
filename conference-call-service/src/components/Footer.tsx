@@ -4,7 +4,7 @@ const Footer = () => {
     const currentYear = new Date().getFullYear()
 
     return (
-        <footer className="bg-gray-800 text-gray-100 py-3 text-center border-t border-gray-700">
+        <div className="bg-gray-800 text-gray-100 py-3 text-center border-t border-gray-700">
             <div className="max-w-6xl mx-auto flex items-center justify-between px-6">
                 {/* 왼쪽: 로고 및 저작권 */}
                 <div className="flex items-center gap-4">
@@ -39,7 +39,7 @@ const Footer = () => {
                     Powered by <strong className="text-blue-400">LiveKit</strong>
                 </div>
             </div>
-        </footer>
+        </div>
     )
 }
 

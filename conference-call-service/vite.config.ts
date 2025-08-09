@@ -7,18 +7,6 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@livekit/components-react": path.resolve(
-        __dirname,
-        "../components-js/packages/react/src"
-      ),
-      "@livekit/components-core": path.resolve(
-        __dirname,
-        "../components-js/packages/core/src"
-      ),
-      "livekit-client": path.resolve(
-        __dirname,
-        "../client-sdk-js/src"
-      ),
       "@": path.resolve(__dirname, "./src"),
     },
   },

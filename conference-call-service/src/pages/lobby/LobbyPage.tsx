@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { type Room } from '../../clients/backendClient'
 import { backendClient } from '../../clients/backendClient'
@@ -7,6 +7,7 @@ import SidebarNavigation from '../../components/SidebarNavigation'
 import RoomList from '../../components/lobby/RoomList'
 import CreateRoomModal, { type CreateRoomData } from '../../components/lobby/CreateRoomModal'
 import Footer from '../../components/Footer'
+import { Box, Flex } from '@radix-ui/themes'
 
 interface LobbyPageProps {
     onNavigateToPublisher: () => void
@@ -18,9 +19,6 @@ interface LobbyPageProps {
 
 const LobbyPage = ({
     onNavigateToPublisher,
-    onNavigateToSubscriber,
-    onNavigateToJoinRoom,
-    onNavigateToCreateRoom
 }: LobbyPageProps) => {
     const navigate = useNavigate()
     const [rooms, setRooms] = useState<Room[]>([])
@@ -97,7 +95,7 @@ const LobbyPage = ({
             setIsCreatingRoom(true)
             console.log('[LobbyPage] 방 생성 시도:', roomData)
 
-            const newRoom = await backendClient.createStream({
+            await backendClient.createStream({
                 metadata: {
                     creator_identity: roomData.userId,
                     title: roomData.name,
@@ -123,13 +121,10 @@ const LobbyPage = ({
         }
     }
 
-    // 통계 계산
-    const totalParticipants = rooms.reduce((total, room) => {
-        return total + (room.num_participants || 0)
-    }, 0)
+    // 통계 계산(현재 미사용)
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50">
+        <Flex direction="column" className="h-screen">
             {/* 헤더 네비게이션 */}
             <HeaderNavigation
                 onCreateRoom={() => setIsCreateModalOpen(true)}
@@ -138,7 +133,7 @@ const LobbyPage = ({
             />
 
             {/* 메인 콘텐츠 영역 */}
-            <div className="flex flex-1 overflow-hidden">
+            <Flex flexGrow="1" overflow="hidden">
                 {/* 왼쪽 사이드바 */}
                 <SidebarNavigation />
 
@@ -157,9 +152,11 @@ const LobbyPage = ({
                     </div>
 
                     {/* 푸터 */}
-                    <Footer />
+                    <footer>
+                        <Footer />
+                    </footer>
                 </main>
-            </div>
+            </Flex>
 
             {/* 방 생성 모달 */}
             <CreateRoomModal
@@ -168,7 +165,7 @@ const LobbyPage = ({
                 onSubmit={handleCreateRoom}
                 loading={isCreatingRoom}
             />
-        </div>
+        </Flex>
     )
 }
 

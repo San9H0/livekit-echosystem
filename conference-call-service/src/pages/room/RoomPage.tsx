@@ -287,7 +287,9 @@ const RoomPage = () => {
                     onPreJoinSubmit={handlePreJoinSubmit}
                     onPreJoinError={handlePreJoinError}
                 />
-                <Footer />
+                <footer>
+                    <Footer />
+                </footer>
             </div>
         )
     }

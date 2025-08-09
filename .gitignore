@@ -5,3 +5,5 @@ publisher/*
 agent-starter-react/*
 client-sdk-js/*
 components-js/*
+.cursor
+.docs
